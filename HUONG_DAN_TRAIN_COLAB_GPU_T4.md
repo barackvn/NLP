@@ -19,44 +19,35 @@
 
 ---
 
-## 🚀 QUY TRÌNH THỰC HIỆN TỪNG BƯỚC (STEP-BY-STEP)
+## 🚀 QUY TRÌNH THỰC HIỆN TỪNG BƯỚC (CHỈ CẦN 1 CÚ CLICK)
 
-### BƯỚC 1: Tải thư mục dự án lên Google Drive
-1. Mở Google Drive cá nhân của bạn.
-2. Tải toàn bộ thư mục `Doan` (đang có trên máy tính) lên Google Drive tại thư mục gốc:
-   👉 Đường dẫn chuẩn trên Drive: `My Drive/Doan`
-   *(Đảm bảo trong thư mục `Doan/data/processed/` đã có đủ 3 file: `train.json`, `dev.json`, `test.json`)*.
+### CÁCH NHANH NHẤT (KHUYÊN DÙNG):
+Truy cập trực tiếp liên kết mở Colab chính thức:  
+👉 **[Mở 02_train_colab_gpu_t4.ipynb trên Google Colab](https://colab.research.google.com/github/barackvn/NLP/blob/main/notebooks/02_train_colab_gpu_t4.ipynb)**
 
----
-
-### BƯỚC 2: Mở Google Colab & Bật GPU Tesla T4
-1. Truy cập: [Google Colab](https://colab.research.google.com/).
-2. Chọn thẻ **Upload** (Tải lên) $\to$ Chọn file: `Doan/notebooks/02_train_colab_gpu_t4.ipynb`.
-3. **BẬT GPU:**
-   * Trên thanh menu Colab, chọn: **Runtime** $\to$ **Change runtime type** (Thay đổi loại thời gian chạy).
-   * Tại mục **Hardware accelerator** (Bộ tăng tốc phần cứng): Chọn **T4 GPU**.
-   * Nhấn **Save** (Lưu).
+Sau khi trang web mở ra:
+1. **BẬT GPU:** Chọn menu **Runtime** $\to$ **Change runtime type** $\to$ Chọn **T4 GPU** $\to$ **Save**.
+2. **CHẠY TẤT CẢ:** Chọn **Runtime** $\to$ **Run all** (hoặc nhấn tổ hợp phím **Ctrl + F9**).
 
 ---
 
-### BƯỚC 3: Kết nối Drive & Cài đặt thư viện (Chạy trên Colab)
-Tạo hoặc chạy các cell lệnh sau trong Notebook:
+### QUY TRÌNH CHI TIẾT TỪNG CELL LỆNH TRÊN COLAB:
 
 ```python
-# 1. Kiểm tra thông tin GPU Tesla T4
+# 1. Kiểm tra GPU Tesla T4 (Phải có dòng hiển thị Tesla T4 16GB VRAM)
 !nvidia-smi
 
-# 2. Kết nối Google Drive để lưu checkpoint vĩnh viễn (không sợ mất khi rớt mạng)
-from google.colab import drive
-import os
+# 2. Tải toàn bộ mã nguồn & dữ liệu từ GitHub chính thức
+%cd /content
+!git clone https://github.com/barackvn/NLP.git
+%cd /content/NLP
 
-drive.mount('/content/drive')
-
-# Chuyển vào thư mục dự án trên Drive
-%cd /content/drive/MyDrive/Doan
-
-# 3. Cài đặt các thư viện cần thiết
+# 3. Cài đặt các thư viện Deep Learning
 !pip install -q transformers pyvi pytorch-crf seqeval accelerate
+
+# 4. (Tùy chọn) Kết nối Drive để lưu checkpoint vĩnh viễn
+from google.colab import drive
+drive.mount('/content/drive')
 ```
 
 ---

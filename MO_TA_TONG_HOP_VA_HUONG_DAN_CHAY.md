@@ -69,7 +69,7 @@ Doan/
 ### 1. Hướng dẫn dành cho Nông Nguyễn Thành (Data & NLP Core)
 * **Mục tiêu:** Nắm vững cấu trúc dữ liệu để thuyết trình **Slide 05–09**.
 * **Thực hiện:**
-  1. Mở file [notebooks/01_data_preprocessing.ipynb](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/notebooks/01_data_preprocessing.ipynb) chạy để kiểm tra:
+  1. Mở file `notebooks/01_data_preprocessing.ipynb` chạy để kiểm tra:
      * Phân bố 3 nhãn: `O` chiếm >88%, `B-HOS` và `I-HOS` chiếm phần còn lại.
      * Độ dài câu: 98.6% câu ngắn hơn 128 từ $\to$ Chốt siêu tham số `max_length = 128`.
   2. Nắm chắc kỹ thuật **First-token Subword Alignment**: Subword đầu nhận nhãn thật, subwords đuôi `@@` gán `-100` để CRF tự bỏ qua, không làm sai lệch độ dài span từ gốc.
@@ -79,37 +79,36 @@ Doan/
 ### 2. Hướng dẫn dành cho Hoàng Võ Minh Tuấn (Model Trainer)
 * **Mục tiêu:** Huấn luyện trên Colab GPU T4, xuất file `.pt` và chuẩn bị tư liệu cho **Slide 10–11**.
 * **Thực hiện:**
-  1. Đọc kỹ cẩm nang: [HUONG_DAN_TRAIN_COLAB_GPU_T4.md](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/HUONG_DAN_TRAIN_COLAB_GPU_T4.md).
-  2. Tải thư mục `Doan` lên Google Drive (`MyDrive/Doan`).
-  3. Mở file [notebooks/02_train_colab_gpu_t4.ipynb](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/notebooks/02_train_colab_gpu_t4.ipynb) trên Google Colab, bật **GPU Tesla T4**.
+  1. Đọc kỹ cẩm nang: `HUONG_DAN_TRAIN_COLAB_GPU_T4.md`.
+  2. Tải thư mục dự án lên Google Drive (`MyDrive/Doan`).
+  3. Mở file `notebooks/02_train_colab_gpu_t4.ipynb` trên Google Colab, bật **GPU Tesla T4**.
   4. Chạy lệnh train tự động:
      ```bash
      !python -m src.train --model_type phobert_bilstm_crf --save_path checkpoints/best_phobert_bilstm_crf.pt
      ```
   5. Chạy tiếp 2 lệnh train baseline để lưu `baseline_phobert_linear.pt` và `baseline_phobert_crf.pt`.
-  6. Tải file `best_phobert_bilstm_crf.pt` về chép vào thư mục `Doan/checkpoints/` trên máy tính. Chụp lại màn hình log train để chèn vào Slide 10–11.
+  6. Tải file `best_phobert_bilstm_crf.pt` về chép vào thư mục `checkpoints/` trên máy tính. Chụp lại màn hình log train để chèn vào Slide 10–11.
 
 ---
 
 ### 3. Hướng dẫn dành cho Bùi Quốc Thịnh (Evaluation & Metrics)
 * **Mục tiêu:** Lấy số liệu đối chứng, biểu đồ khoa học và phân tích lỗi cho **Slide 12–15**.
 * **Thực hiện:**
-  1. Mở file [notebooks/03_ablation_and_evaluation.ipynb](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/notebooks/03_ablation_and_evaluation.ipynb) chạy `Run All`.
-  2. Toàn bộ 4 biểu đồ sắc nét (300 DPI) đã được xuất sẵn tại [Doan/reports/figures/](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/reports/figures/):
+  1. Mở file `notebooks/03_ablation_and_evaluation.ipynb` chạy `Run All`.
+  2. Toàn bộ 4 biểu đồ sắc nét (300 DPI) đã được xuất sẵn tại thư mục `reports/figures/`:
      * `01_ablation_span_f1.png` (So sánh F1 3 mô hình).
      * `02_error_reduction_comparison.png` (Minh chứng triệt tiêu lỗi $O \to I\text{-HOS}$).
      * `03_confusion_matrix_bio.png` (Ma trận nhầm lẫn nhãn BIO).
      * `04_multiple_spans_evaluation.png` (Hiệu quả vượt trội trên câu đa chuỗi).
-  3. Mở file Excel [Doan/reports/error_analysis.xlsx](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/reports/error_analysis.xlsx) để lấy dẫn chứng phân tích 11 dạng lỗi định tính trên 100 câu mẫu thực tế.
+  3. Mở file Excel `reports/error_analysis.xlsx` để lấy dẫn chứng phân tích 11 dạng lỗi định tính trên 100 câu mẫu thực tế.
 
 ---
 
 ### 4. Hướng dẫn dành cho Trần Tiến Dũng (Product Developer)
 * **Mục tiêu:** Khởi chạy và demo sản phẩm Web App phục vụ thuyết trình **Slide 16–17**.
 * **Thực hiện:**
-  1. Mở terminal PowerShell tại thư mục `Doan`:
-     ```powershell
-     cd "c:\Users\Admin\Desktop\Hosonhaphoc\6-Xử lí Ngôn ngữ Tự nhiên\Doan"
+  1. Mở terminal tại thư mục dự án:
+     ```bash
      python -m streamlit run app/app.py
      ```
   2. Truy cập trình duyệt tại: `http://localhost:8501`.
@@ -124,8 +123,8 @@ Doan/
 
 ### 5. Hướng dẫn dành cho Dương Quốc Thương (Project Leader)
 * **Mục tiêu:** Chủ trì phần Mở đầu, Kiến trúc tổng thể và Kết luận (**Slide 01–04 & 18**).
-* **Tài liệu thuyết trình chi tiết:** Mở file [Doan/reports/SLIDES_THUYET_TRINH_18_TRANG.md](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/reports/SLIDES_THUYET_TRINH_18_TRANG.md) để phân phối kịch bản nói cho từng bạn.
-* **Báo cáo nộp Thầy:** Sử dụng file [Doan/reports/BAO_CAO_DO_AN_VIHOS.md](file:///c:/Users/Admin/Desktop/Hosonhaphoc/6-X%E1%BB%AD%20l%C3%AD%20Ng%C3%B4n%20ng%E1%BB%AF%20T%E1%BB%B1%20nhi%C3%AAn/Doan/reports/BAO_CAO_DO_AN_VIHOS.md) để xuất ra Word/PDF nộp Hội đồng chấm điểm.
+* **Tài liệu thuyết trình chi tiết:** Mở file `reports/SLIDES_THUYET_TRINH_18_TRANG.md` để phân phối kịch bản nói cho từng bạn.
+* **Báo cáo nộp Thầy:** Sử dụng file `reports/BAO_CAO_DO_AN_VIHOS.md` để xuất ra Word/PDF nộp Hội đồng chấm điểm.
 
 ---
 

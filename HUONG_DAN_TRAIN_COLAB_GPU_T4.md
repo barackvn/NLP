@@ -117,8 +117,8 @@ Chạy lệnh sau để bắt đầu huấn luyện. Quá trình này chạy t�
 1. Vào Google Drive cá nhân trên máy tính:
    * Vào thư mục: `MyDrive/Doan/checkpoints/`
    * Tải file: **`best_phobert_bilstm_crf.pt`** về máy tính cá nhân.
-2. Đặt file vừa tải vào đúng thư mục dự án trên máy:  
-   👉 `C:\Users\Admin\Desktop\Hosonhaphoc\6-Xử lí Ngôn ngữ Tự nhiên\Doan\checkpoints\`
+2. Đặt file vừa tải vào đúng thư mục checkpoints trong dự án:  
+   👉 `checkpoints/best_phobert_bilstm_crf.pt` (hoặc `Doan/checkpoints/` tùy thư mục gốc của bạn).
 3. Mở lại trình duyệt Web App Streamlit (`http://localhost:8501`) và nhấn **F5**:
    * ✅ Banner vàng biến mất $\to$ chuyển thành **Banner Xanh lá cây**.
    * ✅ Trạng thái chuyển thành: **`🟢 MÔ HÌNH ĐÃ TRAIN (AI ACTIVE)`**.

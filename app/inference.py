@@ -25,16 +25,11 @@ class ViHOSInferenceEngine:
         self.model = None
         self.checkpoint_loaded = False
         
-        # Nạp tokenizer
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(pretrained_name)
-        except Exception as e:
-            print(f"[Warning] Không thể nạp online tokenizer: {e}. Sẽ dùng cơ chế tokenization cơ bản.")
-
-        # Nạp checkpoint nếu có
+        # Nạp checkpoint và tokenizer nếu có file .pt
         self.checkpoint_metrics = {}
         if checkpoint_path and os.path.exists(checkpoint_path):
             try:
+                self.tokenizer = AutoTokenizer.from_pretrained(pretrained_name)
                 self.model = PhoBERT_BiLSTM_CRF(pretrained_name=pretrained_name)
                 checkpoint = torch.load(checkpoint_path, map_location=self.device)
                 state_dict = checkpoint["model_state_dict"] if "model_state_dict" in checkpoint else checkpoint

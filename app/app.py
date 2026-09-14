@@ -11,9 +11,9 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 try:
-    from app.inference import ViHOSInferenceEngine
-except (ModuleNotFoundError, ImportError):
     from inference import ViHOSInferenceEngine
+except (ModuleNotFoundError, ImportError):
+    from app.inference import ViHOSInferenceEngine
 
 # Cấu hình giao diện Streamlit
 st.set_page_config(

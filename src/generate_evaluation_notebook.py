@@ -108,7 +108,10 @@ ablation_results = {
 }
 
 df_ablation = pd.DataFrame(ablation_results)
-df_ablation.to_markdown(os.path.join(ROOT_DIR, "reports", "ablation_table.md"), index=False)
+try:
+    df_ablation.to_markdown(os.path.join(ROOT_DIR, "reports", "ablation_table.md"), index=False)
+except Exception:
+    df_ablation.to_csv(os.path.join(ROOT_DIR, "reports", "ablation_table.csv"), index=False)
 display(df_ablation)"""),
 
     md_cell("""## 3. Vẽ và Xuất Biểu đồ So sánh Span-F1 (Hình cho Slide 12)"""),

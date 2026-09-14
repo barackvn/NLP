@@ -120,3 +120,26 @@ python -m streamlit run app/app.py
 ### 4. Xuất Báo cáo So sánh & Biểu đồ (Thịnh phụ trách)
 * Mở notebook `notebooks/03_ablation_and_evaluation.ipynb` và bấm **Run All**.
 * Các biểu đồ sẽ được tự động lưu vào thư mục `reports/figures/` phục vụ làm Slide bảo vệ và Báo cáo đồ án.
+
+---
+
+## 📚 Trích Dẫn Khoa Học (References & Citations)
+
+```bibtex
+@inproceedings{tran-etal-2023-vihos,
+    title = "{V}i{HOS}: {V}ietnamese Hate and Offensive Spans Detection",
+    author = "Tran, Khanh Quoc and Nguyen, Phu Gia Hoang and Luu, Luan Thanh and Nguyen, Kiet Van",
+    booktitle = "Proceedings of the 17th Conference of the European Chapter of the Association for Computational Linguistics (EACL 2023)",
+    year = "2023",
+    pages = "792--807",
+    url = "https://aclanthology.org/2023.eacl-main.58"
+}
+
+@inproceedings{nguyen-tuan-nguyen-2020-phobert,
+    title = "{P}ho{BERT}: Pre-trained language models for {V}ietnamese",
+    author = "Nguyen, Dat Quoc and Nguyen, Anh Tuan",
+    booktitle = "Findings of EMNLP 2020",
+    year = "2020",
+    pages = "1037--1042"
+}
+```

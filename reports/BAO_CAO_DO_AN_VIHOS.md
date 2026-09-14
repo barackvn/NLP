@@ -29,7 +29,21 @@ Nhiệm vụ là xác định chính xác vị trí (offsets) hoặc chuỗi cá
 * `B-HOS`: Từ bắt đầu chuỗi xúc phạm.
 * `I-HOS`: Từ tiếp theo nằm trong chuỗi xúc phạm.
 
----
+### 1.4. Điểm mới và Đóng góp Học thuật của Đề tài so với Bài báo gốc ViHOS (EACL 2023)
+Trong công trình gốc công bố tại EACL 2023 (*Tran et al., 2023*), nhóm tác giả chủ yếu tập trung xây dựng bộ dữ liệu benchmark và chỉ thực nghiệm 3 baseline cơ bản:
+1. `BiLSTM-CRF`: Sử dụng static Word2Vec cũ, không bắt được ngữ cảnh từ vựng biến thể tiếng Việt hiện đại.
+2. `PhoBERT-Linear` (Baseline của Thầy): Dùng Softmax phân loại độc lập từng token $\to$ **Mắc 2 lỗi chí mạng:**
+   * Sinh chuỗi nhãn phi logic $O \to I\text{-HOS}$ (chiếm 26.4% tổng số lỗi).
+   * Lỗi sai lệch ranh giới từ ghép tiếng Việt (chiếm 25.8% tổng số lỗi).
+3. `XLMR-Linear`: Tương tự baseline PhoBERT-Linear.
+
+👉 **Bài báo gốc HOÀN TOÀN CHƯA CÓ kiến trúc kết hợp PhoBERT-BiLSTM-CRF.**
+
+**Bốn (04) đóng góp đột phá của đề tài:**
+1. **Kiến trúc đề xuất mới (PhoBERT-BiLSTM-CRF):** Lần đầu tiên kết hợp 3 tầng xếp chồng (Contextual Representation + Smoothing Bridge + Global Label Constraints), nâng Span-F1 từ **66.28% lên 70.31% (+4.03%)**, đánh bại toàn bộ các baseline trong bài báo gốc.
+2. **Kỹ thuật First-token Subword Alignment & Differential Learning Rate:** Triệt tiêu hoàn toàn 100% lỗi chuyển nhãn sai ngữ pháp $O \to I\text{-HOS}$ và giảm lỗi sai ranh giới từ từ 25.8% xuống 14.6%.
+3. **Nghiên cứu bóc tách toàn diện (Ablation Study) & Phân loại 11 dạng lỗi định tính:** Minh chứng vai trò vượt trội của tầng BiLSTM trên câu đa chuỗi xúc phạm phân tán (Multiple Spans).
+4. **Sản phẩm ứng dụng Web App CPU hoàn chỉnh:** Tích hợp tính năng tự động kiểm duyệt **Auto-Masking (`***`)** với độ trễ xử lý thực tế 50–80ms/câu trên máy tính cá nhân tiêu chuẩn.
 
 ## CHƯƠNG 2: BỘ DỮ LIỆU CHUẨN ViHOS BENCHMARK (EACL 2023)
 
@@ -123,3 +137,12 @@ Kiến trúc **PhoBERT-BiLSTM-CRF** được thiết kế dưới dạng **3 t�
 
 ## CHƯƠNG 6: KẾT LUẬN & HƯỚNG PHÁT TRIỂN
 Đồ án đã giải quyết thành công bài toán Toxic Spans Detection trên tiếng Việt với mô hình PhoBERT-BiLSTM-CRF đạt F1 vượt trội **70.31%**, triệt tiêu toàn bộ lỗi chuyển nhãn cú pháp và hiện thực hóa thành sản phẩm Web App hoàn chỉnh.
+
+---
+
+## CHƯƠNG 7: TÀI LIỆU THAM KHẢO (REFERENCES)
+
+1. **Tran, K. Q., Nguyen, P. G. H., Luu, L. T., & Nguyen, K. V. (2023).** *ViHOS: Vietnamese Hate and Offensive Spans Detection.* In Proceedings of the 17th Conference of the European Chapter of the Association for Computational Linguistics (EACL 2023), pages 792–807, Dubrovnik, Croatia. Association for Computational Linguistics. DOI: `10.18653/v1/2023.eacl-main.58`.
+2. **Nguyen, D. Q., & Nguyen, A. T. (2020).** *PhoBERT: Pre-trained language models for Vietnamese.* In Findings of the Association for Computational Linguistics: EMNLP 2020, pages 1037–1042.
+3. **Lample, G., Ballesteros, M., Subramanian, S., Kawakami, K., & Dyer, C. (2016).** *Neural Architectures for Named Entity Recognition.* In Proceedings of NAACL-HLT 2016, pages 260–270.
+4. **Lafferty, J., McCallum, A., & Pereira, F. C. (2001).** *Conditional Random Fields: Probabilistic Models for Segmenting and Labeling Sequence Data.* In Proceedings of ICML 2001, pages 282–289.

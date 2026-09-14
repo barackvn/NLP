@@ -29,12 +29,14 @@
   * Xác định chính xác vị trí bắt đầu và kết thúc của từng cụm từ xúc phạm.
   * Cho phép tự động che mờ (Auto-Masking `***`) và hỗ trợ kiểm duyệt viên duyệt nhanh x10 lần.
 
-#### SLIDE 03: Điểm Nghẽn Của Baseline Hiện Hành (PhoBERT-Linear)
-* **Mô hình gốc của Thầy:** Dùng PhoBERT kết hợp tầng Linear Classification tại từng token độc lập.
-* **3 Nút thắt cổ chai:**
-  1. **Quyết định nhãn cục bộ:** Không học được quan hệ phụ thuộc giữa các nhãn liền kề.
-  2. **Lỗi chuyển nhãn phi logic:** Thường xuyên sinh nhãn `O` $\to$ `I-HOS` (Inside mà không có Begin).
-  3. **Lỗi sai ranh giới từ chiếm tới 26.4%:** Khó bắt trọn các từ ghép đa âm tiết hoặc cụm từ xúc phạm dài.
+#### SLIDE 03: Bài Báo Gốc (EACL 2023) Đã Làm Gì & Điểm Nghẽn Của Baseline Hiện Hành
+* **Hiện trạng bài báo gốc (*Tran et al., EACL 2023*):**
+  * Tác giả chỉ công bố dataset ViHOS và thử nghiệm 3 baseline: `BiLSTM-CRF` (dùng Word2Vec tĩnh, F1 thấp), `PhoBERT-Linear` (Baseline của Thầy), và `XLMR-Linear`.
+  * **HOÀN TOÀN CHƯA CÓ mô hình kết hợp PhoBERT-BiLSTM-CRF!**
+* **3 Nút thắt cổ chai của baseline hiện hành (PhoBERT-Linear):**
+  1. **Quyết định nhãn cục bộ:** Softmax coi mỗi từ là phân loại độc lập, không học được quan hệ chuỗi liền kề.
+  2. **Lỗi chuyển nhãn phi logic (26.4%):** Thường xuyên sinh nhãn `O` $\to$ `I-HOS` (Inside mà không có Begin).
+  3. **Lỗi sai ranh giới từ (25.8%):** Bị đứt đoạn ranh giới từ ghép tiếng Việt và bỏ sót câu đa chuỗi xúc phạm phân tán (Multiple Spans).
 
 #### SLIDE 04: Kiến Trúc Đề Xuất - PhoBERT-BiLSTM-CRF
 * **Mô hình 3 tầng xếp chồng (Stacked Architecture):**

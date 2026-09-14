@@ -1,0 +1,5 @@
+tokens,tags,text
+Con mụ hãm_lồn nói_năng xàm_xí,O O B-HOS O B-HOS,Con mụ hãm lồn nói năng xàm xí
+Chúc mọi người một ngày làm_việc vui_vẻ,O O O O O O O,Chúc mọi người một ngày làm việc vui vẻ
+Thằng ranh_con láo_toét ăn_nói xấc_xược,B-HOS I-HOS B-HOS O B-HOS,Thằng ranh con láo toét ăn nói xấc xược
+Tôi rất thích học môn Xử_lý Ngôn_ngữ Tự_nhiên,O O O O O O O O,Tôi rất thích học môn Xử lý Ngôn ngữ Tự nhiên

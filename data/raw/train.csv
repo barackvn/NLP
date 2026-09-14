@@ -1,0 +1,11 @@
+tokens,tags,text
+Đồ ngu nhìn cái mặt mày hãm thật_sự,B-HOS I-HOS O O O O B-HOS O,Đồ ngu nhìn cái mặt mày hãm thật sự
+Mày là đồ súc_sinh mất_dạy vô_học cút đi,O O B-HOS I-HOS B-HOS I-HOS B-HOS O,Mày là đồ súc sinh mất dạy vô học cút đi
+Hôm_nay thời_tiết ở Sài_Gòn đẹp quá đi chơi thôi,O O O O O O O O O,Hôm nay thời tiết ở Sài Gòn đẹp quá đi chơi thôi
+Thằng chó rác_rưởi đừng có ở đây mà xàm,B-HOS I-HOS B-HOS O O O O O B-HOS,Thằng chó rác rưởi đừng có ở đây mà xàm
+Bài hát này nghe rất hay và ý_nghĩa,O O O O O O O O O,Bài hát này nghe rất hay và ý nghĩa
+Cái thứ đàn_bà đĩ_thỏa lăng_loàn,O O O B-HOS I-HOS,Cái thứ đàn bà đĩ thỏa lăng loàn
+Quán cà_phê này view đẹp nhân_viên nhiệt_tình,O O O O O O O,Quán cà phê này view đẹp nhân viên nhiệt tình
+Đúng là lũ óc_chó không biết suy_nghĩ,O O O B-HOS O O O,Đúng là lũ óc chó không biết suy nghĩ
+Cảm_ơn bạn đã chia_sẻ thông_tin hữu_ích,O O O O O O,Cảm ơn bạn đã chia sẻ thông tin hữu ích
+Mặt dày như thớt còn bày_đặt thanh_cao,B-HOS I-HOS O O O O O,Mặt dày như thớt còn bày đặt thanh cao

@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Checkpoints & Weights (Dung lượng > 100MB bị GitHub chặn)
+checkpoints/*.pt
+checkpoints/*.bin
+checkpoints/*.pth
+checkpoints/*.safetensors
+
+# Virtual Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Operating System Files
+.DS_Store
+Thumbs.db

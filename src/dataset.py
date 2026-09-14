@@ -59,6 +59,18 @@ class ViHOSDataset(Dataset):
         valid_mask = [0] # <s> không gán nhãn
 
         for word, tag in zip(tokens, tags):
+            if word is None:
+                continue
+            if not isinstance(word, str):
+                word_str = str(word).strip()
+                if word_str.lower() in ("nan", "null", "none", ""):
+                    continue
+                word = word_str
+            else:
+                word = word.strip()
+                if not word:
+                    continue
+
             word_subwords = self.tokenizer.tokenize(word)
             if len(word_subwords) == 0:
                 continue

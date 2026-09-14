@@ -252841,14 +252841,12 @@
     "sentence_id": 8014,
     "tokens": [
       "Khon",
-      NaN,
       "lu",
       "tham",
       "nhung"
     ],
     "tags": [
       "B-HOS",
-      "I-HOS",
       "B-HOS",
       "I-HOS",
       "I-HOS"
@@ -270488,7 +270486,6 @@
       "của",
       "tổng_thống",
       "Đô",
-      NaN,
       "Trum",
       "hiện_tại",
       "là",
@@ -270509,7 +270506,6 @@
       "nước"
     ],
     "tags": [
-      "O",
       "O",
       "O",
       "O",

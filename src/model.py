@@ -67,11 +67,14 @@ class PhoBERT_BiLSTM_CRF(nn.Module):
             mask = attention_mask.bool()
         else:
             mask = (attention_mask.bool()) & (valid_mask.bool())
+            # Đảm bảo timestep 0 luôn bật để thỏa mãn điều kiện khởi tạo của CRF
+            mask[:, 0] = True
 
         if labels is not None:
             # Chuẩn hóa nhãn -100 thành 0 để truyền vào CRF, các vị trí này sẽ bị che bởi mask
             clean_labels = labels.clone()
             clean_labels[clean_labels == IGNORE_INDEX] = 0
+            clean_labels[:, 0] = 0
             
             # CRF forward trả về log-likelihood -> Negative log-likelihood làm loss
             nll_loss = -self.crf(emissions, clean_labels, mask=mask, reduction='mean')
@@ -79,6 +82,14 @@ class PhoBERT_BiLSTM_CRF(nn.Module):
         else:
             # Giải mã Viterbi trả về danh sách các nhãn dự đoán tốt nhất
             best_paths = self.crf.decode(emissions, mask=mask)
+            if valid_mask is not None:
+                cleaned_paths = []
+                for b in range(len(best_paths)):
+                    if not valid_mask[b, 0] and len(best_paths[b]) > 0:
+                        cleaned_paths.append(best_paths[b][1:])
+                    else:
+                        cleaned_paths.append(best_paths[b])
+                return cleaned_paths, emissions
             return best_paths, emissions
 
     def decode(self, input_ids, attention_mask, valid_mask=None):
@@ -94,8 +105,17 @@ class PhoBERT_BiLSTM_CRF(nn.Module):
                 mask = attention_mask.bool()
             else:
                 mask = (attention_mask.bool()) & (valid_mask.bool())
+                mask[:, 0] = True
                 
             predictions = self.crf.decode(emissions, mask=mask)
+            if valid_mask is not None:
+                cleaned_preds = []
+                for b in range(len(predictions)):
+                    if not valid_mask[b, 0] and len(predictions[b]) > 0:
+                        cleaned_preds.append(predictions[b][1:])
+                    else:
+                        cleaned_preds.append(predictions[b])
+                return cleaned_preds
             return predictions
 
 
@@ -129,14 +149,24 @@ class PhoBERT_CRF(nn.Module):
             mask = attention_mask.bool()
         else:
             mask = (attention_mask.bool()) & (valid_mask.bool())
+            mask[:, 0] = True
 
         if labels is not None:
             clean_labels = labels.clone()
             clean_labels[clean_labels == IGNORE_INDEX] = 0
+            clean_labels[:, 0] = 0
             nll_loss = -self.crf(emissions, clean_labels, mask=mask, reduction='mean')
             return nll_loss, emissions
         else:
             best_paths = self.crf.decode(emissions, mask=mask)
+            if valid_mask is not None:
+                cleaned_paths = []
+                for b in range(len(best_paths)):
+                    if not valid_mask[b, 0] and len(best_paths[b]) > 0:
+                        cleaned_paths.append(best_paths[b][1:])
+                    else:
+                        cleaned_paths.append(best_paths[b])
+                return cleaned_paths, emissions
             return best_paths, emissions
 
     def decode(self, input_ids, attention_mask, valid_mask=None):
@@ -150,8 +180,18 @@ class PhoBERT_CRF(nn.Module):
                 mask = attention_mask.bool()
             else:
                 mask = (attention_mask.bool()) & (valid_mask.bool())
+                mask[:, 0] = True
                 
-            return self.crf.decode(emissions, mask=mask)
+            predictions = self.crf.decode(emissions, mask=mask)
+            if valid_mask is not None:
+                cleaned_preds = []
+                for b in range(len(predictions)):
+                    if not valid_mask[b, 0] and len(predictions[b]) > 0:
+                        cleaned_preds.append(predictions[b][1:])
+                    else:
+                        cleaned_preds.append(predictions[b])
+                return cleaned_preds
+            return predictions
 
 
 class PhoBERT_Linear(nn.Module):

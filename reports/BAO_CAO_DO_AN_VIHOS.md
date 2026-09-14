@@ -32,7 +32,7 @@ Nhiệm vụ là xác định chính xác vị trí (offsets) hoặc chuỗi cá
 ### 1.4. Điểm mới và Đóng góp Học thuật của Đề tài so với Bài báo gốc ViHOS (EACL 2023)
 Trong công trình gốc công bố tại EACL 2023 (*Tran et al., 2023*), nhóm tác giả chủ yếu tập trung xây dựng bộ dữ liệu benchmark và chỉ thực nghiệm 3 baseline cơ bản:
 1. `BiLSTM-CRF`: Sử dụng static Word2Vec cũ, không bắt được ngữ cảnh từ vựng biến thể tiếng Việt hiện đại.
-2. `PhoBERT-Linear` (Baseline của Thầy): Dùng Softmax phân loại độc lập từng token $\to$ **Mắc 2 lỗi chí mạng:**
+2. `PhoBERT-Linear` (Baseline của Thầy): Dùng Softmax phân loại độc lập từng token $\to$ **tồn tại 2 điểm hạn chế lớn:**
    * Sinh chuỗi nhãn phi logic $O \to I\text{-HOS}$ (chiếm 26.4% tổng số lỗi).
    * Lỗi sai lệch ranh giới từ ghép tiếng Việt (chiếm 25.8% tổng số lỗi).
 3. `XLMR-Linear`: Tương tự baseline PhoBERT-Linear.

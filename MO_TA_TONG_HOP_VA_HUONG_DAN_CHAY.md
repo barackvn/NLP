@@ -146,7 +146,7 @@ Nhiều thành viên và Thầy có thể thắc mắc: *"Bài báo ViHOS đã c
 * Tác giả công bố bộ dữ liệu ViHOS chủ yếu để làm **Benchmark Dataset**.
 * Trong repo của tác giả (`phusroyal/ViHOS`), họ **CHỈ CHẠY 3 BASELINE CƠ BẢN**:
   1. `BiLSTM-CRF`: Dùng static Word2Vec cũ kỹ, không hiểu ngữ cảnh tiếng Việt hiện đại, F1 thấp.
-  2. `PhoBERT-Linear` (Baseline gốc của Thầy): Dùng Softmax phân loại từng token độc lập, **bị 2 lỗi chí mạng:**
+  2. `PhoBERT-Linear` (Baseline gốc của Thầy): Dùng Softmax phân loại từng token độc lập, **tồn tại 2 điểm hạn chế lớn:**
      * Lỗi sinh nhãn phi logic $O \to I\text{-HOS}$ chiếm tới **26.4%**.
      * Lỗi lệch ranh giới từ ghép tiếng Việt chiếm **25.8%**.
   3. `XLMR-Linear`: XLM-RoBERTa phân loại độc lập.

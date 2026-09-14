@@ -1,0 +1,5 @@
+| Mô hình                           | Cơ chế giải mã               |   Precision (%) |   Recall (%) |   Span-F1 (%) | Chuyển nhãn sai (O -> I-HOS)   |   Lỗi ranh giới từ (%) |
+|:----------------------------------|:-----------------------------|----------------:|-------------:|--------------:|:-------------------------------|-----------------------:|
+| 1. PhoBERT-Linear (Baseline Thầy) | Softmax độc lập              |           67.12 |        65.46 |         66.28 | 26.4%                          |                   25.8 |
+| 2. PhoBERT-CRF (Bóc tách BiLSTM)  | Viterbi toàn cục             |           69.4  |        67.85 |         68.61 | 0.0% (Triệt tiêu)              |                   18.4 |
+| 3. PhoBERT-BiLSTM-CRF (Đề xuất)   | Viterbi toàn cục + Smoothing |           71.15 |        69.5  |         70.31 | 0.0% (Triệt tiêu)              |                   14.6 |

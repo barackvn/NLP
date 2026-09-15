@@ -55,8 +55,8 @@ class ViHOSDataset(Dataset):
         tags = item["tags"]
 
         input_ids = [self.tokenizer.bos_token_id]
-        aligned_labels = [IGNORE_INDEX]
-        valid_mask = [0] # <s> không gán nhãn
+        word_indices = []
+        word_labels = []
 
         for word, tag in zip(tokens, tags):
             if word is None:
@@ -77,68 +77,79 @@ class ViHOSDataset(Dataset):
             subword_ids = self.tokenizer.convert_tokens_to_ids(word_subwords)
             label_id = LABEL2ID.get(tag, LABEL2ID["O"])
 
-            # First-token subword alignment:
-            # Subword đầu tiên nhận nhãn BIO thật
-            input_ids.append(subword_ids[0])
-            aligned_labels.append(label_id)
-            valid_mask.append(1)
+            # Ghi nhận vị trí subword đầu tiên của từ
+            first_subword_pos = len(input_ids)
+            
+            # Kiểm tra nếu vị trí vượt quá max_length - 1 (dành chỗ cho </s>)
+            if first_subword_pos >= self.max_length - 1:
+                break
 
-            # Các subword tiếp theo nhận IGNORE_INDEX (-100)
-            for sub_id in subword_ids[1:]:
-                input_ids.append(sub_id)
-                aligned_labels.append(IGNORE_INDEX)
-                valid_mask.append(0)
+            word_indices.append(first_subword_pos)
+            word_labels.append(label_id)
+
+            for sub_id in subword_ids:
+                if len(input_ids) < self.max_length - 1:
+                    input_ids.append(sub_id)
+                else:
+                    break
 
         # Thêm </s> token
         input_ids.append(self.tokenizer.eos_token_id)
-        aligned_labels.append(IGNORE_INDEX)
-        valid_mask.append(0)
-
-        # Cắt bớt nếu vượt quá max_length
-        if len(input_ids) > self.max_length:
-            input_ids = input_ids[:self.max_length - 1] + [self.tokenizer.eos_token_id]
-            aligned_labels = aligned_labels[:self.max_length - 1] + [IGNORE_INDEX]
-            valid_mask = valid_mask[:self.max_length - 1] + [0]
-
         attention_mask = [1] * len(input_ids)
+        word_mask = [1] * len(word_indices)
+
+        # Đảm bảo có ít nhất 1 word token để không làm sập tensor batch
+        if not word_indices:
+            word_indices = [1]
+            word_labels = [LABEL2ID["O"]]
+            word_mask = [1]
 
         return {
             "input_ids": input_ids,
             "attention_mask": attention_mask,
-            "labels": aligned_labels,
-            "valid_mask": valid_mask,
-            "original_tokens": tokens,
-            "original_tags": tags
+            "word_indices": word_indices,
+            "word_labels": word_labels,
+            "word_mask": word_mask,
+            "original_tokens": tokens[:len(word_indices)],
+            "original_tags": tags[:len(word_labels)]
         }
 
 
 def vihos_collate_fn(batch, pad_token_id=1):
     """
     Hàm gom batch và đệm (padding) động theo độ dài lớn nhất trong batch.
-    PhoBERT pad_token_id mặc định là 1 (<pad>).
+    - Subwords được pad theo max_subword_len.
+    - Words và Word Masks được pad theo max_word_len (word_mask liên tục 100%).
     """
-    max_len = max(len(item["input_ids"]) for item in batch)
+    max_subword_len = max(len(item["input_ids"]) for item in batch)
+    max_word_len = max(len(item["word_indices"]) for item in batch)
     
     batch_input_ids = []
     batch_attention_mask = []
-    batch_labels = []
-    batch_valid_mask = []
+    batch_word_indices = []
+    batch_word_labels = []
+    batch_word_mask = []
     original_tokens = [item["original_tokens"] for item in batch]
     original_tags = [item["original_tags"] for item in batch]
 
     for item in batch:
-        pad_len = max_len - len(item["input_ids"])
+        pad_sub_len = max_subword_len - len(item["input_ids"])
+        pad_word_len = max_word_len - len(item["word_indices"])
         
-        batch_input_ids.append(item["input_ids"] + [pad_token_id] * pad_len)
-        batch_attention_mask.append(item["attention_mask"] + [0] * pad_len)
-        batch_labels.append(item["labels"] + [IGNORE_INDEX] * pad_len)
-        batch_valid_mask.append(item["valid_mask"] + [0] * pad_len)
+        batch_input_ids.append(item["input_ids"] + [pad_token_id] * pad_sub_len)
+        batch_attention_mask.append(item["attention_mask"] + [0] * pad_sub_len)
+        
+        # Word indices pad với 0 (vị trí <s> an toàn)
+        batch_word_indices.append(item["word_indices"] + [0] * pad_word_len)
+        batch_word_labels.append(item["word_labels"] + [IGNORE_INDEX] * pad_word_len)
+        batch_word_mask.append(item["word_mask"] + [0] * pad_word_len)
 
     return {
         "input_ids": torch.tensor(batch_input_ids, dtype=torch.long),
         "attention_mask": torch.tensor(batch_attention_mask, dtype=torch.long),
-        "labels": torch.tensor(batch_labels, dtype=torch.long),
-        "valid_mask": torch.tensor(batch_valid_mask, dtype=torch.bool),
+        "word_indices": torch.tensor(batch_word_indices, dtype=torch.long),
+        "labels": torch.tensor(batch_word_labels, dtype=torch.long),
+        "word_mask": torch.tensor(batch_word_mask, dtype=torch.bool),
         "original_tokens": original_tokens,
         "original_tags": original_tags
     }

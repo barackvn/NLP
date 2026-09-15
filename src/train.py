@@ -102,11 +102,12 @@ def train_pipeline(args):
         for batch in pbar:
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
+            word_indices = batch["word_indices"].to(device)
+            word_mask = batch["word_mask"].to(device)
             labels = batch["labels"].to(device)
-            valid_mask = batch["valid_mask"].to(device)
 
             optimizer.zero_grad()
-            loss, _ = model(input_ids, attention_mask, labels=labels, valid_mask=valid_mask)
+            loss, _ = model(input_ids, attention_mask, word_indices=word_indices, word_mask=word_mask, labels=labels)
             
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)

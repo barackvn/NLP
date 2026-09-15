@@ -102,8 +102,7 @@ class ViHOSInferenceEngine:
         # Nếu mô hình checkpoint đã nạp và tokenizer sẵn sàng
         if self.checkpoint_loaded and self.model and self.tokenizer:
             input_ids = [self.tokenizer.bos_token_id]
-            valid_mask = [0]
-            word_to_token_idx = []
+            word_indices = []
 
             for word in words:
                 subwords = self.tokenizer.tokenize(word)
@@ -111,23 +110,22 @@ class ViHOSInferenceEngine:
                     subwords = [self.tokenizer.unk_token]
                 sub_ids = self.tokenizer.convert_tokens_to_ids(subwords)
                 
-                word_to_token_idx.append(len(input_ids))
+                word_indices.append(len(input_ids))
                 input_ids.append(sub_ids[0])
-                valid_mask.append(1)
-                
                 for s in sub_ids[1:]:
                     input_ids.append(s)
-                    valid_mask.append(0)
 
             input_ids.append(self.tokenizer.eos_token_id)
-            valid_mask.append(0)
+            attention_mask = [1] * len(input_ids)
+            word_mask = [1] * len(word_indices)
 
             t_input_ids = torch.tensor([input_ids], dtype=torch.long, device=self.device)
-            t_attn_mask = torch.tensor([[1] * len(input_ids)], dtype=torch.long, device=self.device)
-            t_valid_mask = torch.tensor([valid_mask], dtype=torch.bool, device=self.device)
+            t_attn_mask = torch.tensor([attention_mask], dtype=torch.long, device=self.device)
+            t_word_idx = torch.tensor([word_indices], dtype=torch.long, device=self.device)
+            t_word_mask = torch.tensor([word_mask], dtype=torch.bool, device=self.device)
 
             with torch.no_grad():
-                preds = self.model.decode(t_input_ids, t_attn_mask, valid_mask=t_valid_mask)[0]
+                preds = self.model.decode(t_input_ids, t_attn_mask, word_indices=t_word_idx, word_mask=t_word_mask)[0]
 
             tags = [ID2LABEL.get(p, "O") for p in preds[:len(words)]]
             if len(tags) < len(words):

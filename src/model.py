@@ -45,78 +45,62 @@ class PhoBERT_BiLSTM_CRF(nn.Module):
         # Tầng CRF học ma trận chuyển đổi nhãn
         self.crf = CRF(num_tags=num_labels, batch_first=True)
 
-    def forward(self, input_ids, attention_mask, labels=None, valid_mask=None):
+    def forward(self, input_ids, attention_mask, word_indices=None, word_mask=None, labels=None, valid_mask=None):
         """
         - input_ids: (batch_size, seq_len)
         - attention_mask: (batch_size, seq_len)
-        - labels: (batch_size, seq_len) với các nhãn subword phụ là -100
-        - valid_mask: (batch_size, seq_len) bool tensor đánh dấu token hợp lệ cho CRF
+        - word_indices: (batch_size, num_words) vị trí subword đầu tiên của mỗi từ
+        - word_mask: (batch_size, num_words) bool tensor đánh dấu từ hợp lệ (liên tục 100%)
+        - labels: (batch_size, num_words) nhãn BIO cấp độ từ
         """
         outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
-        sequence_output = outputs.last_hidden_state  # (batch_size, seq_len, 768)
-        sequence_output = self.dropout(sequence_output)
+        sequence_output = self.dropout(outputs.last_hidden_state)
         
+        # Word-level pooling nếu có word_indices
+        if word_indices is not None:
+            dim = sequence_output.size(-1)
+            idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+            feats = torch.gather(sequence_output, 1, idx_exp) # (batch_size, num_words, 768)
+            mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
+        else:
+            feats = sequence_output
+            mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+
         # BiLSTM Layer
-        lstm_out, _ = self.bilstm(sequence_output)   # (batch_size, seq_len, 512)
+        lstm_out, _ = self.bilstm(feats)
         lstm_out = self.dropout(lstm_out)
         
         # Emission scores
-        emissions = self.classifier(lstm_out)       # (batch_size, seq_len, num_labels)
+        emissions = self.classifier(lstm_out) # (batch_size, seq_len/num_words, num_labels)
         
-        if valid_mask is None:
-            mask = attention_mask.bool()
-        else:
-            mask = (attention_mask.bool()) & (valid_mask.bool())
-            # Đảm bảo timestep 0 luôn bật để thỏa mãn điều kiện khởi tạo của CRF
-            mask[:, 0] = True
-
         if labels is not None:
-            # Chuẩn hóa nhãn -100 thành 0 để truyền vào CRF, các vị trí này sẽ bị che bởi mask
             clean_labels = labels.clone()
             clean_labels[clean_labels == IGNORE_INDEX] = 0
-            clean_labels[:, 0] = 0
-            
-            # CRF forward trả về log-likelihood -> Negative log-likelihood làm loss
             nll_loss = -self.crf(emissions, clean_labels, mask=mask, reduction='mean')
             return nll_loss, emissions
         else:
-            # Giải mã Viterbi trả về danh sách các nhãn dự đoán tốt nhất
             best_paths = self.crf.decode(emissions, mask=mask)
-            if valid_mask is not None:
-                cleaned_paths = []
-                for b in range(len(best_paths)):
-                    if not valid_mask[b, 0] and len(best_paths[b]) > 0:
-                        cleaned_paths.append(best_paths[b][1:])
-                    else:
-                        cleaned_paths.append(best_paths[b])
-                return cleaned_paths, emissions
             return best_paths, emissions
 
-    def decode(self, input_ids, attention_mask, valid_mask=None):
-        """Hàm giải mã Viterbi thuận tiện khi suy luận (Inference)."""
+    def decode(self, input_ids, attention_mask, word_indices=None, word_mask=None, valid_mask=None):
+        """Hàm giải mã Viterbi chuẩn xác cấp độ từ."""
         self.eval()
         with torch.no_grad():
             outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
             sequence_output = self.dropout(outputs.last_hidden_state)
-            lstm_out, _ = self.bilstm(sequence_output)
-            emissions = self.classifier(lstm_out)
             
-            if valid_mask is None:
-                mask = attention_mask.bool()
+            if word_indices is not None:
+                dim = sequence_output.size(-1)
+                idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+                feats = torch.gather(sequence_output, 1, idx_exp)
+                mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
             else:
-                mask = (attention_mask.bool()) & (valid_mask.bool())
-                mask[:, 0] = True
-                
-            predictions = self.crf.decode(emissions, mask=mask)
-            if valid_mask is not None:
-                cleaned_preds = []
-                for b in range(len(predictions)):
-                    if not valid_mask[b, 0] and len(predictions[b]) > 0:
-                        cleaned_preds.append(predictions[b][1:])
-                    else:
-                        cleaned_preds.append(predictions[b])
-                return cleaned_preds
-            return predictions
+                feats = sequence_output
+                mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+
+            lstm_out, _ = self.bilstm(feats)
+            emissions = self.classifier(lstm_out)
+            return self.crf.decode(emissions, mask=mask)
 
 
 class PhoBERT_CRF(nn.Module):
@@ -140,58 +124,47 @@ class PhoBERT_CRF(nn.Module):
         self.classifier = nn.Linear(embed_dim, num_labels)
         self.crf = CRF(num_tags=num_labels, batch_first=True)
 
-    def forward(self, input_ids, attention_mask, labels=None, valid_mask=None):
+    def forward(self, input_ids, attention_mask, word_indices=None, word_mask=None, labels=None, valid_mask=None):
         outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
         sequence_output = self.dropout(outputs.last_hidden_state)
-        emissions = self.classifier(sequence_output)
         
-        if valid_mask is None:
-            mask = attention_mask.bool()
+        if word_indices is not None:
+            dim = sequence_output.size(-1)
+            idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+            feats = torch.gather(sequence_output, 1, idx_exp)
+            mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
         else:
-            mask = (attention_mask.bool()) & (valid_mask.bool())
-            mask[:, 0] = True
+            feats = sequence_output
+            mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
 
+        emissions = self.classifier(feats)
+        
         if labels is not None:
             clean_labels = labels.clone()
             clean_labels[clean_labels == IGNORE_INDEX] = 0
-            clean_labels[:, 0] = 0
             nll_loss = -self.crf(emissions, clean_labels, mask=mask, reduction='mean')
             return nll_loss, emissions
         else:
             best_paths = self.crf.decode(emissions, mask=mask)
-            if valid_mask is not None:
-                cleaned_paths = []
-                for b in range(len(best_paths)):
-                    if not valid_mask[b, 0] and len(best_paths[b]) > 0:
-                        cleaned_paths.append(best_paths[b][1:])
-                    else:
-                        cleaned_paths.append(best_paths[b])
-                return cleaned_paths, emissions
             return best_paths, emissions
 
-    def decode(self, input_ids, attention_mask, valid_mask=None):
+    def decode(self, input_ids, attention_mask, word_indices=None, word_mask=None, valid_mask=None):
         self.eval()
         with torch.no_grad():
             outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
             sequence_output = self.dropout(outputs.last_hidden_state)
-            emissions = self.classifier(sequence_output)
             
-            if valid_mask is None:
-                mask = attention_mask.bool()
+            if word_indices is not None:
+                dim = sequence_output.size(-1)
+                idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+                feats = torch.gather(sequence_output, 1, idx_exp)
+                mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
             else:
-                mask = (attention_mask.bool()) & (valid_mask.bool())
-                mask[:, 0] = True
-                
-            predictions = self.crf.decode(emissions, mask=mask)
-            if valid_mask is not None:
-                cleaned_preds = []
-                for b in range(len(predictions)):
-                    if not valid_mask[b, 0] and len(predictions[b]) > 0:
-                        cleaned_preds.append(predictions[b][1:])
-                    else:
-                        cleaned_preds.append(predictions[b])
-                return cleaned_preds
-            return predictions
+                feats = sequence_output
+                mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+
+            emissions = self.classifier(feats)
+            return self.crf.decode(emissions, mask=mask)
 
 
 class PhoBERT_Linear(nn.Module):
@@ -214,12 +187,21 @@ class PhoBERT_Linear(nn.Module):
         self.classifier = nn.Linear(self.config.hidden_size, num_labels)
         self.loss_fct = nn.CrossEntropyLoss(ignore_index=IGNORE_INDEX)
 
-    def forward(self, input_ids, attention_mask, labels=None, valid_mask=None):
+    def forward(self, input_ids, attention_mask, word_indices=None, word_mask=None, labels=None, valid_mask=None):
         outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
         sequence_output = self.dropout(outputs.last_hidden_state)
-        logits = self.classifier(sequence_output)  # (batch_size, seq_len, num_labels)
         
-        loss = None
+        if word_indices is not None:
+            dim = sequence_output.size(-1)
+            idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+            feats = torch.gather(sequence_output, 1, idx_exp)
+            mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
+        else:
+            feats = sequence_output
+            mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+
+        logits = self.classifier(feats)
+        
         if labels is not None:
             loss = self.loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             return loss, logits
@@ -227,20 +209,27 @@ class PhoBERT_Linear(nn.Module):
             preds = torch.argmax(logits, dim=-1)
             return preds, logits
 
-    def decode(self, input_ids, attention_mask, valid_mask=None):
+    def decode(self, input_ids, attention_mask, word_indices=None, word_mask=None, valid_mask=None):
         self.eval()
         with torch.no_grad():
             outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
             sequence_output = self.dropout(outputs.last_hidden_state)
-            logits = self.classifier(sequence_output)
-            preds = torch.argmax(logits, dim=-1) # (batch_size, seq_len)
             
-            mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+            if word_indices is not None:
+                dim = sequence_output.size(-1)
+                idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+                feats = torch.gather(sequence_output, 1, idx_exp)
+                mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
+            else:
+                feats = sequence_output
+                mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+
+            logits = self.classifier(feats)
+            preds = torch.argmax(logits, dim=-1)
             
-            # Chuyển đổi thành list of lists tương đương decode của CRF
             results = []
             for i in range(preds.size(0)):
                 seq_len = mask[i].sum().item()
-                valid_preds = preds[i][mask[i]][:seq_len].tolist()
+                valid_preds = preds[i][:seq_len].tolist()
                 results.append(valid_preds)
             return results

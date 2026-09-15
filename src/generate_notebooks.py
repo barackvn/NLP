@@ -101,23 +101,45 @@ for sub, tag in zip(subwords_list, aligned_tags):
 
 # 2. Notebook 02: Training Colab GPU T4
 nb02_cells = [
-    md_cell("# 02 - Huấn luyện PhoBERT-BiLSTM-CRF trên Google Colab (GPU Tesla T4)\n**Người phụ trách:** Hoàng Võ Minh Tuấn (26410146)\n**Cấu hình:** GPU T4 16GB VRAM, AdamW, Differential Learning Rate"),
+    md_cell("""# 🚀 Huấn Luyện PhoBERT-BiLSTM-CRF Trên Google Colab (GPU Tesla T4)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/barackvn/NLP/blob/main/notebooks/02_train_colab_gpu_t4.ipynb)
+
+**Đề tài:** Nhận diện chuỗi ngôn ngữ xúc phạm tiếng Việt (ViHOS)  
+**Người phụ trách:** Hoàng Võ Minh Tuấn (Trainer - 26410146)  
+**Môi trường:** GPU Tesla T4 (16GB VRAM), PyTorch, HuggingFace Transformers, PyTorch-CRF, Seqeval  
+**GitHub Repo chính thức:** [https://github.com/barackvn/NLP](https://github.com/barackvn/NLP)"""),
+    
+    md_cell("## Bước 1: Kiểm tra cấu hình GPU Tesla T4\nĐảm bảo bạn đã chọn **Runtime -> Change runtime type -> T4 GPU** trước khi chạy!"),
     code_cell("""# Kiểm tra GPU Colab
 !nvidia-smi"""),
-    md_cell("## 1. Cài đặt các thư viện cần thiết"),
+    
+    md_cell("## Bước 2: Tải Mã Nguồn & Dữ Liệu từ GitHub Chính Thức\nToàn bộ code đã sửa lỗi CRF và dữ liệu ViHOS đầy đủ (11.056 câu) sẽ được nạp tự động."),
+    code_cell("""import os
+%cd /content
+if os.path.exists('/content/NLP'):
+    !rm -rf /content/NLP
+
+# Clone repository chính thức
+!git clone https://github.com/barackvn/NLP.git
+%cd /content/NLP
+!pwd"""),
+
+    md_cell("## Bước 3: Cài đặt các thư viện cần thiết"),
     code_cell("""!pip install -q transformers pyvi pytorch-crf seqeval accelerate"""),
-    md_cell("## 2. Kết nối Google Drive để lưu checkpoint"),
+
+    md_cell("## Bước 4: Kết nối Google Drive để lưu checkpoint vĩnh viễn"),
     code_cell("""from google.colab import drive
 import os
 
 drive.mount('/content/drive')
 CHECKPOINT_DIR = '/content/drive/MyDrive/ViHOS_Checkpoints'
-os.makedirs(CHECKPOINT_DIR, exist_ok=True)"""),
-    md_cell("## 3. Clone source code và chuẩn bị dữ liệu"),
-    code_cell("""# Nếu clone từ GitHub hoặc tải zip repo:
-# !git clone https://github.com/your-repo/vihos-phobert-bilstm-crf.git
-# %cd vihos-phobert-bilstm-crf"""),
-    md_cell("## 4. Khởi chạy Huấn luyện Mô hình Đề xuất (PhoBERT-BiLSTM-CRF)"),
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+print(f"✅ Thư mục sao lưu Drive: {CHECKPOINT_DIR}")"""),
+
+    md_cell("""## Bước 5: Huấn Luyện Mô Hình Đề Xuất (PhoBERT-BiLSTM-CRF)
+- **Cấu hình:** Epochs = 5, Batch size = 16, PhoBERT LR = `2e-5`, BiLSTM-CRF LR = `1e-3`
+- **Cơ chế:** Word-level Pooling + Contiguous Viterbi Decoding (Đã sửa triệt để lỗi CRF)
+- **Early Stopping:** patience = 3 trên tập DEV"""),
     code_cell("""!python -m src.train \\
     --model_type phobert_bilstm_crf \\
     --train_path data/processed/train.json \\
@@ -127,9 +149,13 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)"""),
     --batch_size 16 \\
     --lr_phobert 2e-5 \\
     --lr_head 1e-3 \\
-    --max_length 128"""),
-    md_cell("## 5. Huấn luyện 2 Mô hình Baseline để phục vụ Ablation Study"),
-    code_cell("""# Baseline 1: PhoBERT-Linear (Softmax độc lập)
+    --max_length 128 \\
+    --patience 3"""),
+
+    md_cell("""## Bước 6: Huấn Luyện 2 Mô Hình Đối Chứng (Ablation Baselines)
+1. **PhoBERT-Linear (Baseline Thầy Đặng Văn Thìn):** Softmax độc lập từng token.
+2. **PhoBERT-CRF (Bóc tách Ablation):** Đánh giá vai trò của tầng BiLSTM."""),
+    code_cell("""# 1. Baseline Thầy: PhoBERT-Linear
 !python -m src.train \\
     --model_type phobert_linear \\
     --train_path data/processed/train.json \\
@@ -140,7 +166,7 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)"""),
     --lr_phobert 2e-5 \\
     --lr_head 1e-3
 
-# Baseline 2: PhoBERT-CRF (Bóc tách vai trò BiLSTM)
+# 2. Baseline bóc tách: PhoBERT-CRF
 !python -m src.train \\
     --model_type phobert_crf \\
     --train_path data/processed/train.json \\
@@ -150,7 +176,24 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)"""),
     --batch_size 16 \\
     --lr_phobert 2e-5 \\
     --lr_head 1e-3"""),
-    md_cell("## 6. Hoàn tất & Tải Checkpoint\nCheckpoints đã được lưu tự động trong Google Drive: `best_phobert_bilstm_crf.pt` (~540MB). Tải về máy cá nhân đưa vào thư mục `checkpoints/` để chạy Web App CPU.")
+
+    md_cell("## Bước 7: Đánh Giá So Sánh Cả 3 Mô Hình Trên Tập Test ViHOS (1.106 câu)\nĐo lường Span-Precision, Span-Recall, Span-F1 chuẩn mực bằng seqeval."),
+    code_cell("""print('='*70)
+print('1. KẾT QUẢ TEST: PhoBERT-Linear (Baseline Thầy):')
+!python -m src.evaluate --model_type phobert_linear --checkpoint {CHECKPOINT_DIR}/baseline_phobert_linear.pt --test_path data/processed/test.json
+
+print('='*70)
+print('2. KẾT QUẢ TEST: PhoBERT-CRF (Bóc tách Ablation):')
+!python -m src.evaluate --model_type phobert_crf --checkpoint {CHECKPOINT_DIR}/baseline_phobert_crf.pt --test_path data/processed/test.json
+
+print('='*70)
+print('3. KẾT QUẢ TEST: PhoBERT-BiLSTM-CRF (Đề xuất SOTA):')
+!python -m src.evaluate --model_type phobert_bilstm_crf --checkpoint {CHECKPOINT_DIR}/best_phobert_bilstm_crf.pt --test_path data/processed/test.json"""),
+
+    md_cell("## Bước 8: Tải Checkpoint Về Máy Cá Nhân Để Chạy Web App Demo"),
+    code_cell("""from google.colab import files
+# Tải checkpoint tốt nhất về máy qua trình duyệt
+files.download(f"{CHECKPOINT_DIR}/best_phobert_bilstm_crf.pt")""")
 ]
 
 # 3. Notebook 03: Ablation & Evaluation

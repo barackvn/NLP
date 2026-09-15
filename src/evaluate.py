@@ -20,25 +20,30 @@ def evaluate_model(model, dataloader, device):
         for batch in dataloader:
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
+            word_indices = batch.get("word_indices")
+            if word_indices is not None:
+                word_indices = word_indices.to(device)
+            word_mask = batch.get("word_mask")
+            if word_mask is not None:
+                word_mask = word_mask.to(device)
             labels = batch["labels"].to(device)
-            valid_mask = batch["valid_mask"].to(device)
             
-            # Giải mã nhãn dự đoán qua decode method
-            predictions = model.decode(input_ids, attention_mask, valid_mask=valid_mask)
+            # Giải mã nhãn dự đoán qua decode method cấp độ word
+            predictions = model.decode(input_ids, attention_mask, word_indices=word_indices, word_mask=word_mask)
             
             labels_np = labels.cpu().numpy()
-            valid_mask_np = valid_mask.cpu().numpy()
+            mask_np = word_mask.cpu().numpy() if word_mask is not None else batch.get("valid_mask", torch.ones_like(labels)).cpu().numpy()
             
             for i in range(len(predictions)):
                 pred_seq = predictions[i]
                 
-                # Trích xuất nhãn thực tế tại các vị trí valid
+                # Trích xuất nhãn thực tế tại các vị trí word hợp lệ
                 true_seq = []
-                for label_id, is_valid in zip(labels_np[i], valid_mask_np[i]):
+                for label_id, is_valid in zip(labels_np[i], mask_np[i]):
                     if is_valid and label_id != IGNORE_INDEX:
                         true_seq.append(ID2LABEL.get(label_id, "O"))
                 
-                # Chuẩn hóa độ dài dự đoán khớp với nhãn thực tế
+                # Chuẩn hóa độ dài dự đoán khớp 1:1 với nhãn thực tế
                 pred_seq_labels = [ID2LABEL.get(p, "O") for p in pred_seq[:len(true_seq)]]
                 if len(pred_seq_labels) < len(true_seq):
                     pred_seq_labels.extend(["O"] * (len(true_seq) - len(pred_seq_labels)))
@@ -69,3 +74,49 @@ def evaluate_model(model, dataloader, device):
         "pred_tags": all_pred_tags
     }
     return metrics
+
+
+if __name__ == "__main__":
+    import argparse
+    from torch.utils.data import DataLoader
+    from transformers import AutoTokenizer
+    from .dataset import ViHOSDataset, vihos_collate_fn
+    from .model import PhoBERT_BiLSTM_CRF, PhoBERT_CRF, PhoBERT_Linear
+    from .utils import load_checkpoint, get_device
+
+    parser = argparse.ArgumentParser(description="Đánh giá mô hình ViHOS Toxic Spans Detection")
+    parser.add_argument("--model_type", type=str, required=True, choices=["phobert_bilstm_crf", "phobert_crf", "phobert_linear"])
+    parser.add_argument("--checkpoint", type=str, required=True)
+    parser.add_argument("--test_path", type=str, default="data/processed/test.json")
+    parser.add_argument("--pretrained_name", type=str, default="vinai/phobert-base-v2")
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--max_length", type=int, default=128)
+    args = parser.parse_args()
+
+    device = get_device()
+    tokenizer = AutoTokenizer.from_pretrained(args.pretrained_name)
+
+    test_ds = ViHOSDataset(args.test_path, tokenizer=tokenizer, max_length=args.max_length)
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        collate_fn=lambda b: vihos_collate_fn(b, pad_token_id=tokenizer.pad_token_id)
+    )
+
+    if args.model_type == "phobert_bilstm_crf":
+        model = PhoBERT_BiLSTM_CRF(pretrained_name=args.pretrained_name)
+    elif args.model_type == "phobert_crf":
+        model = PhoBERT_CRF(pretrained_name=args.pretrained_name)
+    else:
+        model = PhoBERT_Linear(pretrained_name=args.pretrained_name)
+
+    load_checkpoint(args.checkpoint, model, map_location=str(device))
+    model.to(device)
+
+    print(f"\nEvaluating {args.model_type} on {args.test_path}...")
+    metrics = evaluate_model(model, test_loader, device)
+    print(f"Precision: {metrics['span_precision']*100:.2f}%")
+    print(f"Recall:    {metrics['span_recall']*100:.2f}%")
+    print(f"Span-F1:   {metrics['span_f1']*100:.2f}%\n")
+    print("Classification Report:\n", metrics["classification_report"])

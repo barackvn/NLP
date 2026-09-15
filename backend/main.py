@@ -113,8 +113,10 @@ def classify_categories(words: List[str], spans: List[str]) -> List[str]:
     order = ["INSULT", "PROFANITY", "THREAT", "DISCRIMINATION", "OTHER"]
     return [cat for cat in order if cat in detected]
 
+import re
+
 def format_masked_text(words: List[str], tags: List[str]) -> str:
-    """Tạo chuỗi văn bản đã che ký tự độc hại với ***"""
+    """Tạo chuỗi văn bản đã che ký tự độc hại với *** và phục hồi dấu câu tự nhiên."""
     masked_tokens = []
     for w, t in zip(words, tags):
         if t in ("B-HOS", "I-HOS"):
@@ -132,7 +134,10 @@ def format_masked_text(words: List[str], tags: List[str]) -> str:
         else:
             merged.append(token)
             in_star = False
-    return " ".join(merged)
+    
+    res = " ".join(merged)
+    res = re.sub(r'\s+([,.\?!;:])', r'\1', res)
+    return res
 
 class PredictRequest(BaseModel):
     text: str
@@ -189,12 +194,16 @@ def predict_endpoint(req: PredictRequest):
         # Kiểm tra bất thường cú pháp nhãn
         has_syntax_err = any(p == "O" and c == "I-HOS" for p, c in zip(pred["tags"][:-1], pred["tags"][1:]))
 
+        # Đọc F1 từ checkpoint nếu có
+        real_f1 = eng.checkpoint_metrics.get("span_f1")
+        f1_str = f"{float(real_f1):.3f}" if real_f1 is not None else cfg["f1_val"]
+
         results.append({
             "alias": alias,
             "key": cfg["key"],
             "name": cfg["name"],
             "num": cfg["num"],
-            "f1_val": cfg["f1_val"],
+            "f1_val": f1_str,
             "color": cfg["color"],
             "is_toxic": pred["is_toxic"],
             "spans_count": len(pred["spans"]),

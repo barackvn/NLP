@@ -1,11 +1,50 @@
 import torch
-from seqeval.metrics import classification_report, f1_score, precision_score, recall_score
-from seqeval.scheme import IOB2
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import pandas as pd
 
 from .utils import ID2LABEL, IGNORE_INDEX
+
+try:
+    from seqeval.metrics import classification_report, f1_score, precision_score, recall_score
+    from seqeval.scheme import IOB2
+    HAS_SEQEVAL = True
+except ImportError:
+    HAS_SEQEVAL = False
+
+def get_spans(tags):
+    """Trích xuất danh sách các thực thể span theo chuẩn IOB2."""
+    spans = set()
+    start = None
+    for i, t in enumerate(tags):
+        if t == 'B-HOS':
+            if start is not None:
+                spans.add((start, i - 1))
+            start = i
+        elif t == 'I-HOS':
+            if start is None:
+                start = None
+        else: # 'O'
+            if start is not None:
+                spans.add((start, i - 1))
+                start = None
+    if start is not None:
+        spans.add((start, len(tags) - 1))
+    return spans
+
+def compute_span_metrics(true_list, pred_list):
+    """Tính toán Precision, Recall, Span-F1 chuẩn IOB2 exact match không cần thư viện ngoài."""
+    total_tp, total_pred, total_true = 0, 0, 0
+    for t_seq, p_seq in zip(true_list, pred_list):
+        t_spans = get_spans(t_seq)
+        p_spans = get_spans(p_seq)
+        total_true += len(t_spans)
+        total_pred += len(p_spans)
+        total_tp += len(t_spans & p_spans)
+    p = total_tp / total_pred if total_pred > 0 else 0.0
+    r = total_tp / total_true if total_true > 0 else 0.0
+    f1 = 2 * p * r / (p + r) if (p + r) > 0 else 0.0
+    return p, r, f1
 
 def evaluate_model(model, dataloader, device):
     """
@@ -51,11 +90,15 @@ def evaluate_model(model, dataloader, device):
                 all_true_tags.append(true_seq)
                 all_pred_tags.append(pred_seq_labels)
 
-    # Tính toán các chỉ số Span-Level bằng seqeval (chuẩn IOB2)
-    span_p = precision_score(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
-    span_r = recall_score(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
-    span_f1 = f1_score(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
-    report = classification_report(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
+    # Tính toán các chỉ số Span-Level (chuẩn IOB2 Exact Match)
+    if HAS_SEQEVAL:
+        span_p = precision_score(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
+        span_r = recall_score(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
+        span_f1 = f1_score(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
+        report = classification_report(all_true_tags, all_pred_tags, mode='strict', scheme=IOB2)
+    else:
+        span_p, span_r, span_f1 = compute_span_metrics(all_true_tags, all_pred_tags)
+        report = f"Span-Precision: {span_p*100:.2f}%\nSpan-Recall: {span_r*100:.2f}%\nSpan-F1: {span_f1*100:.2f}%"
 
     # Token-level confusion matrix
     flat_true = [t for seq in all_true_tags for t in seq]

@@ -125,7 +125,7 @@ if os.path.exists('/content/NLP'):
 !pwd"""),
 
     md_cell("## Bước 3: Cài đặt các thư viện cần thiết"),
-    code_cell("""!pip install -q transformers pyvi seqeval accelerate"""),
+    code_cell("""!pip install -q transformers accelerate"""),
 
     md_cell("## Bước 4: Kết nối Google Drive để lưu checkpoint vĩnh viễn"),
     code_cell("""from google.colab import drive
@@ -141,7 +141,7 @@ print(f"✅ Thư mục sao lưu Drive: {CHECKPOINT_DIR}")"""),
 - **Cơ chế:** Word-level Pooling + Contiguous Viterbi Decoding (Đã sửa triệt để lỗi CRF)
 - **Early Stopping:** patience = 3 trên tập DEV"""),
     code_cell("""# Cài đặt tự động để đảm bảo thư viện luôn sẵn sàng kể cả khi chưa chạy Bước 3
-!pip install -q transformers pyvi seqeval accelerate
+!pip install -q transformers accelerate
 
 !python -m src.train \\
     --model_type phobert_bilstm_crf \\

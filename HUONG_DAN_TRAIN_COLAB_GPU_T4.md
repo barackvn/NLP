@@ -109,11 +109,10 @@ Chạy lệnh sau để bắt đầu huấn luyện. Quá trình này chạy t�
    * Vào thư mục: `MyDrive/Doan/checkpoints/`
    * Tải file: **`best_phobert_bilstm_crf.pt`** về máy tính cá nhân.
 2. Đặt file vừa tải vào đúng thư mục checkpoints trong dự án:  
-   👉 `checkpoints/best_phobert_bilstm_crf.pt` (hoặc `Doan/checkpoints/` tùy thư mục gốc của bạn).
-3. Mở lại trình duyệt Web App Streamlit (`http://localhost:8501`) và nhấn **F5**:
-   * ✅ Banner vàng biến mất $\to$ chuyển thành **Banner Xanh lá cây**.
-   * ✅ Trạng thái chuyển thành: **`🟢 MÔ HÌNH ĐÃ TRAIN (AI ACTIVE)`**.
-   * ✅ Độ trễ xử lý thực tế trên CPU hiển thị: **50 – 80 ms / câu**.
+3. Mở lại trình duyệt Web App React (`http://localhost:5173`):
+   * ✅ Nút trạng thái trên header hiển thị: **`🟢 3/3 Mô hình Sẵn sàng ▾`**.
+   * ✅ Trạng thái mô hình SOTA chuyển thành: **`Đã nạp checkpoint thực nghiệm (AI Active)`**.
+   * ✅ Độ trễ xử lý thực tế trên CPU hiển thị: **~80 – 120 ms / câu**.
 
 ---
 

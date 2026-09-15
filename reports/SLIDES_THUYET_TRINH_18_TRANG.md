@@ -18,7 +18,7 @@
   2. **Nông Nguyễn Thành (26410115) - Data & NLP Core:** Xử lý tập ViHOS, Subword Alignment, Slide 05-09.
   3. **Hoàng Võ Minh Tuấn (26410146) - Trainer:** Setup Colab GPU T4, Differential LR, lưu checkpoint, Slide 10-11.
   4. **Bùi Quốc Thịnh (26410108) - Evaluation & Metrics:** Chạy ablation baselines, đo Span-F1 seqeval, phân loại 11 dạng lỗi, Slide 12-15.
-  5. **Trần Tiến Dũng (26410024) - Product Developer:** Xây dựng Web App CPU Streamlit, tích hợp Auto-Masking, Slide 16-17.
+  5. **Trần Tiến Dũng (26410024) - Product Developer:** Xây dựng Web App Client-Server (Backend FastAPI + Frontend React 19 Vite), tích hợp Auto-Masking, Slide 16-17.
 
 #### SLIDE 02: Thực Trạng & Bài Toán Toxic Spans Detection
 * **Vấn nạn phát ngôn thù ghét:** Mạng xã hội Việt Nam bùng nổ các bình luận công kích, xúc phạm cá nhân và tổ chức.
@@ -102,14 +102,16 @@
 ### PHẦN IV: ĐÁNH GIÁ THỰC NGHIỆM & PHÂN TÍCH LỖI
 *Người trình bày: **Bùi Quốc Thịnh** (26410108) - Evaluation & Metrics*
 
-#### SLIDE 12: Bảng Số Liệu Nghiên Cứu Bóc Tách (Ablation Study)
+#### SLIDE 12: Bảng Số Liệu Nghiên Cứu Bóc Tách & Bản Chất 3 Trường Phái
 * So sánh đối chứng 3 kiến trúc trên cùng tập Test ViHOS:
 
-| Mô hình | Precision | Recall | **Span-F1** | Mức cải thiện |
-| :--- | :---: | :---: | :---: | :---: |
-| **PhoBERT-Linear** *(Baseline Thầy)* | 67.12% | 65.46% | **66.28%** | Baseline gốc |
-| **PhoBERT-CRF** | 69.40% | 67.85% | **68.61%** | **+2.33%** |
-| **PhoBERT-BiLSTM-CRF** *(Đề xuất)* | **71.15%** | **69.50%** | **70.31%** | **+4.03%** |
+| Tiêu chí | 1. PhoBERT-Linear (Baseline) | 2. PhoBERT-CRF (Ablation) | 3. PhoBERT-BiLSTM-CRF (SOTA) |
+| :--- | :--- | :--- | :--- |
+| **Bản chất** | Softmax quyết định độc lập từng từ | CRF ràng buộc chuỗi toàn cục | BiLSTM nhớ dài 2 chiều + CRF Viterbi |
+| **Hình tượng** | **Người gác cổng vội vàng:** Nhìn từng từ đơn lẻ để gán nhãn | **Trọng tài nghiêm ngặt:** Bắt buộc nhãn sau phải hợp luật với nhãn trước | **Thám tử toàn diện:** Vừa thuộc luật (CRF), vừa có trí nhớ chuỗi dài (BiLSTM) |
+| **Lỗi $O \to I\text{-HOS}$** | **26.4%** (lỗi nghiêm trọng) | **0.0% (Triệt tiêu 100%)** | **0.0% (Triệt tiêu 100%)** |
+| **Lỗi ranh giới từ** | **25.8%** (chém cụt từ ghép) | **18.4%** | **14.6% (Giảm 11.2%)** |
+| **Span-F1** | **66.28%** | **68.61% (+2.33%)** | **70.31% (+4.03%)** |
 
 #### SLIDE 13: Đóng Góp Của Tầng CRF: Triệt Tiêu Lỗi Chuyển Nhãn
 * **Tỷ lệ bước chuyển lỗi phi logic `O` $\to$ `I-HOS`:**
@@ -122,27 +124,34 @@
   * PhoBERT-Linear thường chỉ nhận diện cụm đầu và bỏ sót cụm sau.
   * PhoBERT-BiLSTM-CRF tăng **+5.8% Recall** nhờ duy trì trạng thái ẩn bộ nhớ dài hai chiều.
 
-#### SLIDE 15: Phân Tích Định Tính 11 Dạng Lỗi (Error Analysis)
-* Thống kê 100 câu sai thực tế (chi tiết trong `reports/error_analysis.xlsx`):
+#### SLIDE 15: Phân Tích Định Tính 11 Dạng Lỗi & Ca Điển Hình (Case Study)
+* **Thống kê 100 câu sai thực tế** (`reports/error_analysis.xlsx`):
   * Giảm mạnh: Lỗi đa chuỗi (-66.7%), Lỗi ranh giới từ ghép (-57.1%), Teencode/viết tắt (-38.9%).
-  * Thách thức còn lại: Ngữ nghĩa châm biếm (Sarcasm), trích dẫn lại lời nói người khác.
+* **Ca nghiên cứu điển hình (Case Study Thực nghiệm):**
+  * Câu test: *"Món ăn của quán này bình thường nhưng giá cả hơi đắt như con kẹt"*
+  * `PhoBERT-Linear` & `CRF`: Bắt được *"con kẹt"* (quyết định theo token đơn lẻ).
+  * `PhoBERT-BiLSTM-CRF`: Bỏ sót (False Negative) do **hiện tượng Over-smoothing**.
+  * **Giải thích phản biện xuất sắc:** Vế trước mang ngữ cảnh review đồ ăn trung tính áp đảo (`O` tag), BiLSTM làm mượt trạng thái ẩn khiến tín hiệu từ lóng biến âm hiếm gặp (*"con kẹt"* $\leftrightarrow$ *"con cặc"*) bị triệt tiêu ở Viterbi decoding.
 
 ---
 
-### PHẦN V: SẢN PHẨM ỨNG DỤNG LOCAL CPU & KẾT LUẬN
+### PHẦN V: SẢN PHẨM ỨNG DỤNG CLIENT-SERVER & KẾT LUẬN
 *Người trình bày: **Trần Tiến Dũng** (Slide 16-17) & **Dương Quốc Thương** (Slide 18)*
 
-#### SLIDE 16: Kiến Trúc Ứng Dụng Web App Chạy Thuần CPU (Dũng)
-* Framework: **Streamlit UI**.
-* Engine suy luận: Chạy thuần trên **CPU** (`torch.device('cpu')`), chỉ dùng **< 1GB RAM**.
-* Tốc độ xử lý: **50 – 80 ms / câu** (đáp ứng tiêu chuẩn phản hồi thời gian thực).
+#### SLIDE 16: Kiến Trúc Ứng Dụng Client-Server Chuẩn Doanh Nghiệp (Dũng)
+* **Backend:** **Python FastAPI** phục vụ REST API `/api/predict`, nạp 3 checkpoint vào RAM 1 lần duy nhất, độ trễ **~100 ms/câu** trên CPU.
+* **Frontend:** **React 19 + Vite** (`npm run dev`), giao diện Modern SaaS Dashboard chuẩn 100% Mockup, tích hợp bảng kiểm soát trạng thái 3 mô hình thời gian thực.
+* **Vận hành:** Chạy trong 1 terminal duy nhất (`npm run dev`) và tắt tức thì trong 0.1s bằng `Ctrl + C`.
 
 #### SLIDE 17: Tính Năng Sản Phẩm & Demo Thực Tế (Dũng)
 * **3 Tính năng nổi bật:**
-  1. Highlight trực quan các cụm từ xúc phạm theo màu nhãn BIO.
-  2. Tính năng **Auto-Masking (`***`)**: Tự động lọc từ bậy mà giữ nguyên ngữ pháp câu.
-  3. Bảng đối chứng Ablation Study tương tác ngay trên giao diện web.
+  1. Highlight trực quan cụm từ xúc phạm theo dải màu nhãn BIO.
+  2. Tính năng **Auto-Masking (`***`)**: Tự động kiểm duyệt từ bậy mà giữ nguyên ngữ cảnh câu.
+  3. Bảng đối chứng 3 cột trực tiếp (Linear vs CRF vs BiLSTM-CRF) kèm hệ thống phân loại danh mục: `INSULT`, `PROFANITY`, `THREAT`, `DISCRIMINATION`, `OTHER`.
 
-#### SLIDE 18: Kết Luận & Hướng Phát Triển Tương Lai (Thương)
-* **Kết luận:** Mô hình đề xuất PhoBERT-BiLSTM-CRF giải quyết triệt để các hạn chế của baseline gốc, nâng Span-F1 lên **70.31% (+4.03%)**, đóng gói thành ứng dụng Web CPU hoàn chỉnh.
-* **Hướng phát triển:** Tích hợp mô-đun phát hiện châm biếm và tối ưu hóa lượng tử hóa ONNX Runtime cho ứng dụng di động.
+#### SLIDE 18: Kết Luận, Hạn Chế & Định Hướng Phát Triển (Thương)
+* **Kết luận:** Mô hình đề xuất PhoBERT-BiLSTM-CRF nâng Span-F1 lên **70.31% (+4.03%)**, triệt tiêu 100% lỗi cú pháp và đóng gói thành Web App chuẩn công nghiệp.
+* **Căn cứ 3 Hạn chế cốt lõi để Định hướng phát triển tiếp theo:**
+  1. *Lỗi Over-smoothing trên từ lóng biến âm:* $\to$ Bổ sung **Từ điển Tiếng Lóng & Biến âm (Slang Lexicon Embeddings)** vào tầng biểu diễn đặc trưng.
+  2. *Độ phủ dữ liệu teencode:* $\to$ Áp dụng **Data Augmentation** tự động hoán đổi biến thể từ lóng (*con cặc* $\leftrightarrow$ *con kẹt*, *đm* $\leftrightarrow$ *đcm*) trong ngữ cảnh câu trung tính.
+  3. *Ngữ nghĩa châm biếm (Sarcasm):* $\to$ Nghiên cứu mô hình đa nhiệm kết hợp phân tích ngữ cảm (Sentiment-aware Contrastive Learning).

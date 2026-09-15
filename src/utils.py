@@ -61,8 +61,12 @@ def save_checkpoint(model: torch.nn.Module, optimizer: torch.optim.Optimizer, ep
     torch.save(state, filepath)
 
 def load_checkpoint(filepath: str, model: torch.nn.Module, optimizer: torch.optim.Optimizer = None, map_location: str = "cpu"):
-    """Nạp trọng số mô hình từ checkpoint."""
-    checkpoint = torch.load(filepath, map_location=map_location)
+    """Nạp trọng số mô hình từ checkpoint an toàn trên cả PyTorch 2.6+ và các bản cũ."""
+    try:
+        checkpoint = torch.load(filepath, map_location=map_location, weights_only=False)
+    except TypeError:
+        checkpoint = torch.load(filepath, map_location=map_location)
+    
     if "model_state_dict" in checkpoint:
         model.load_state_dict(checkpoint["model_state_dict"])
     else:
@@ -70,3 +74,4 @@ def load_checkpoint(filepath: str, model: torch.nn.Module, optimizer: torch.opti
     if optimizer and "optimizer_state_dict" in checkpoint and checkpoint["optimizer_state_dict"]:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     return checkpoint.get("metrics", {}), checkpoint.get("epoch", 0)
+

@@ -1,0 +1,13 @@
+{
+  "name": "vihos-toxic-spans-guard",
+  "version": "1.0.0",
+  "description": "ViHOS Toxic Spans Guard Project - UIT 2026",
+  "scripts": {
+    "dev": "concurrently -n \"BE,FE\" -c \"cyan,magenta\" \"python -m uvicorn backend.main:app --port 8000\" \"npm run dev --prefix frontend\"",
+    "be": "python -m uvicorn backend.main:app --port 8000",
+    "fe": "npm run dev --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

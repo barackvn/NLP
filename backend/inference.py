@@ -9,7 +9,7 @@ if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
 from src.utils import ID2LABEL, IGNORE_INDEX
-from src.model import PhoBERT_BiLSTM_CRF
+from src.model import PhoBERT_BiLSTM_CRF, PhoBERT_CRF, PhoBERT_Linear
 
 # Danh mục từ ngữ xúc phạm mẫu để hỗ trợ fallback khi chưa tải file checkpoint nặng
 FALLBACK_TOXIC_LEXICON = {
@@ -18,29 +18,65 @@ FALLBACK_TOXIC_LEXICON = {
 }
 
 class ViHOSInferenceEngine:
+    model_name: str = "PhoBERT-BiLSTM-CRF (Đề xuất SOTA)"
+    checkpoint_loaded: bool = False
+
     def __init__(self, checkpoint_path: str = None, pretrained_name: str = "vinai/phobert-base-v2"):
         self.device = torch.device("cpu")
         self.pretrained_name = pretrained_name
+        self.checkpoint_path = checkpoint_path
         self.tokenizer = None
         self.model = None
+        self.model_name = "Chế độ Giả lập (Mock Rule)"
         self.checkpoint_loaded = False
-        
-        # Nạp checkpoint và tokenizer nếu có file .pt
         self.checkpoint_metrics = {}
-        if checkpoint_path and os.path.exists(checkpoint_path):
+        
+        self.load_error = None
+        # Nạp checkpoint và tokenizer nếu có file .pt
+        if not checkpoint_path:
+            self.load_error = "Chưa chỉ định checkpoint_path."
+        elif not os.path.exists(checkpoint_path):
+            self.load_error = f"Không tìm thấy file checkpoint tại: {checkpoint_path}"
+        else:
             try:
                 self.tokenizer = AutoTokenizer.from_pretrained(pretrained_name)
-                self.model = PhoBERT_BiLSTM_CRF(pretrained_name=pretrained_name)
-                checkpoint = torch.load(checkpoint_path, map_location=self.device)
+                try:
+                    checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+                except TypeError:
+                    checkpoint = torch.load(checkpoint_path, map_location=self.device)
+
                 state_dict = checkpoint["model_state_dict"] if "model_state_dict" in checkpoint else checkpoint
                 self.checkpoint_metrics = checkpoint.get("metrics", {})
+
+                # Tự động nhận diện kiến trúc dựa trên trọng số
+                has_bilstm = any("bilstm" in k for k in state_dict.keys())
+                has_crf = any("crf" in k for k in state_dict.keys())
+
+                if has_bilstm and has_crf:
+                    self.model = PhoBERT_BiLSTM_CRF(pretrained_name=pretrained_name)
+                    self.model_name = "🌟 PhoBERT-BiLSTM-CRF (Đề xuất SOTA)"
+                elif has_crf:
+                    self.model = PhoBERT_CRF(pretrained_name=pretrained_name)
+                    self.model_name = "🔬 PhoBERT-CRF (Bóc tách Ablation)"
+                else:
+                    self.model = PhoBERT_Linear(pretrained_name=pretrained_name)
+                    self.model_name = "📌 PhoBERT-Linear (Baseline Thầy)"
+
                 self.model.load_state_dict(state_dict)
                 self.model.to(self.device)
                 self.model.eval()
                 self.checkpoint_loaded = True
-                print(f"[Success] Nạp thành công checkpoint {checkpoint_path} lên CPU.")
+                try:
+                    print(f"[Success] Model loaded successfully: {self.model_name}")
+                except Exception:
+                    pass
             except Exception as e:
-                print(f"[Warning] Lỗi khi nạp checkpoint: {e}. Chuyển sang chế độ dự phòng.")
+                import traceback
+                self.load_error = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+                try:
+                    print(f"[Warning] Error loading checkpoint: {e}")
+                except Exception:
+                    pass
 
     def tokenize_vietnamese(self, text: str):
         """Tách từ tiếng Việt chuẩn hóa."""
@@ -140,7 +176,8 @@ class ViHOSInferenceEngine:
             "spans": spans,
             "latency_ms": round(latency_ms, 2),
             "is_toxic": is_toxic,
-            "engine_mode": "TRAINED_AI_MODEL" if self.checkpoint_loaded else "MOCK_DEMO_RULE",
+            "model_name": self.model_name,
+            "engine_mode": self.model_name if self.checkpoint_loaded else "MOCK_DEMO_RULE",
             "checkpoint_loaded": self.checkpoint_loaded
         }
 

@@ -29,6 +29,17 @@ Nhiệm vụ là xác định chính xác vị trí (offsets) hoặc chuỗi cá
 * `B-HOS`: Từ bắt đầu chuỗi xúc phạm.
 * `I-HOS`: Từ tiếp theo nằm trong chuỗi xúc phạm.
 
+Để giải quyết triệt để các hạn chế trên, đề tài thực hiện nghiên cứu đối chứng giữa 3 trường phái kiến trúc:
+
+| Tiêu chí | 1. PhoBERT-Linear (Baseline Thầy) | 2. PhoBERT-CRF (Bóc tách Ablation) | 3. PhoBERT-BiLSTM-CRF (Đề xuất SOTA) |
+| :--- | :--- | :--- | :--- |
+| **Bản chất kiến trúc** | PhoBERT + Linear Head + Softmax độc lập | PhoBERT + Tầng CRF Viterbi toàn cục | PhoBERT + BiLSTM 2 chiều + Tầng CRF Viterbi |
+| **Hình tượng ẩn dụ** | **Người gác cổng quyết định vội vàng:** Nhìn từng từ một cách độc lập để gắn nhãn, không quan tâm từ trước/sau là gì. | **Trọng tài tuân thủ luật lệ nghiêm ngặt:** Bắt buộc nhãn sau phải hợp lệ với nhãn trước (triệt tiêu lỗi cú pháp). | **Thám tử điều tra toàn diện:** Vừa hiểu luật chuyển nhãn (CRF), vừa có sổ tay ghi nhớ ngữ cảnh 2 chiều (BiLSTM). |
+| **Lỗi cú pháp $O \to I\text{-HOS}$** | **Rất cao (26.4%)**: Nhãn $I$ xuất hiện vô cớ mà không có $B$ mở đầu. | **0.0% (Triệt tiêu 100%)** nhờ ma trận phạt chuyển trạng thái $A_{i,j}$. | **0.0% (Triệt tiêu 100%)** nhờ ma trận phạt chuyển trạng thái $A_{i,j}$. |
+| **Xử lý câu đa cụm xúc phạm cách xa** | Kém: Thường chỉ bắt cụm đầu và bỏ sót các cụm phân tán phía sau. | Khá: Giảm sót cụm nhưng có thể gom nhầm từ sạch ở giữa vào span. | **Xuất sắc (+5.8% Recall):** Định vị chuẩn xác từng cụm phân tán độc lập. |
+| **Lỗi ranh giới từ ghép tiếng Việt** | Cao (**25.8%**): Dễ cắt cụt từ ghép (*mất...* bỏ *dạy*). | Trung bình (**18.4%**). | **Thấp nhất (14.6% - Giảm 11.2%)**: Bóc tách nguyên vẹn ranh giới từ ghép. |
+| **Span-F1 Benchmark** | **66.28%** | **68.61% (+2.33%)** | **70.31% (+4.03%)** |
+
 ### 1.4. Điểm mới và Đóng góp Học thuật của Đề tài so với Bài báo gốc ViHOS (EACL 2023)
 Trong công trình gốc công bố tại EACL 2023 (*Tran et al., 2023*), nhóm tác giả chủ yếu tập trung xây dựng bộ dữ liệu benchmark và chỉ thực nghiệm 3 baseline cơ bản:
 1. `BiLSTM-CRF`: Sử dụng static Word2Vec cũ, không bắt được ngữ cảnh từ vựng biến thể tiếng Việt hiện đại.
@@ -125,18 +136,50 @@ Kiến trúc **PhoBERT-BiLSTM-CRF** được thiết kế dưới dạng **3 t�
 * Giảm lỗi sai ranh giới từ ghép từ 14 câu xuống 6 câu (-57.1%).
 * Giảm lỗi nhận diện teencode/viết tắt từ 18 câu xuống 11 câu (-38.9%).
 
+### 4.4. Ca nghiên cứu điển hình (Case Study): Hiện tượng Lệch phân phối & Over-smoothing trên Từ lóng Biến âm
+Trong quá trình thử nghiệm thực tế trên hệ thống, nhóm phát hiện một ca phân tích lỗi (Error Analysis) rất giá trị mang tính bản chất giữa các cơ chế giải mã:
+* **Câu thử nghiệm:** *"Món ăn của quán này bình thường nhưng giá cả hơi đắt như con kẹt"*
+* **Kết quả đối chứng thực tế:**
+  * `PhoBERT-Linear (Baseline)`: **Phát hiện 1 chuỗi vi phạm** (`con kẹt` - $102.6\text{ ms}$).
+  * `PhoBERT-CRF (Ablation)`: **Phát hiện 1 chuỗi vi phạm** (`con kẹt` - $104.6\text{ ms}$).
+  * `PhoBERT-BiLSTM-CRF (Đề xuất SOTA)`: **Bỏ sót (0 chuỗi)** $\to$ *Dự đoán nhầm toàn bộ câu là sạch*.
+* **Phân tích nguyên nhân khoa học:**
+  1. *Đặc trưng ngôn ngữ học (Linguistic factor):* "Con kẹt" là tiếng lóng giảm thanh/biến âm (Euphemistic Slang) của từ thô tục "con cặc". Trong tiếng Việt quy chuẩn, từ "kẹt" là từ vựng trung tính 100% mang nghĩa sạch (*kẹt xe, kẹt tiền, mắc kẹt*).
+  2. *Lệch phân phối dữ liệu (Data Distribution Bias):* Trong tập huấn luyện ViHOS benchmark, các từ chửi tục trực diện xuất hiện dày đặc, trong khi biến thể địa phương "con kẹt" gần như vắng mặt. Toàn bộ các ngữ cảnh chứa từ "kẹt" trong tập train đều được gán nhãn `O` (nhãn sạch).
+  3. *Hiện tượng Over-smoothing của mạng tuần tự BiLSTM:* 
+     * Mô hình Baseline (Linear) ra quyết định bằng Softmax độc lập trên từng token, chỉ cần vector embedding của "con" và "kẹt" có tương quan tiêu cực là kích hoạt nhãn vi phạm (High Recall cục bộ trên từ đơn lẻ).
+     * Ngược lại, tầng BiLSTM trong mô hình đề xuất học sự phụ thuộc ngữ cảnh toàn chuỗi hai chiều. Do vế trước là câu đánh giá đồ ăn mang sắc thái hoàn toàn trung tính (*"Món ăn của quán này bình thường nhưng giá cả hơi đắt..."*), dòng thông tin ngữ cảnh sạch áp đảo toàn bộ câu. Trạng thái ẩn của BiLSTM bị làm mượt (over-smoothing), dẫn đến việc triệt tiêu tín hiệu vi phạm của từ lóng hiếm gặp ở cuối câu, khiến giải mã Viterbi chọn đường đi toàn bộ nhãn `O` (False Negative).
+
 ---
 
-## CHƯƠNG 5: SẢN PHẨM ỨNG DỤNG LOCAL CPU (STREAMLIT APP)
+## CHƯƠNG 5: SẢN PHẨM ỨNG DỤNG CLIENT-SERVER (FASTAPI + REACT VITE)
 
-* Nhóm đã đóng gói toàn bộ mô hình thành ứng dụng tương tác chạy thuần trên **CPU** (`app/app.py`).
-* Tốc độ phản hồi đạt **~50–80 ms/câu** trên CPU tiêu chuẩn với mức tiêu thụ RAM < 1GB.
-* Tích hợp tính năng **Auto-Masking (`***`)**: Tự động che giấu các cụm từ xúc phạm mà không làm thay đổi các từ trung tính còn lại.
+* Nhóm đã đóng gói toàn bộ mô hình thành ứng dụng tương tác hoàn chỉnh theo kiến trúc chuẩn công nghiệp:
+  * **Backend (FastAPI - Port 8000):** Tải và duy trì 3 checkpoint PyTorch vào RAM, cung cấp REST API `/api/predict` với độ trễ xử lý cực nhanh (**~100 ms/câu** trên CPU tiêu chuẩn).
+  * **Frontend (React 19 + Vite - Port 5173):** Giao diện Modern SaaS Dashboard với bảng điều khiển kiểm soát trạng thái kết nối thời gian thực của 3 mô hình, kịch bản chạy 1 lệnh duy nhất (`npm run dev`) trên terminal và dừng tức thì bằng `Ctrl + C` trong 0.1s.
+* Tích hợp tính năng **Auto-Masking (`***`)**: Tự động che giấu các cụm từ xúc phạm mà không làm xáo trộn ngữ pháp câu.
 
 ---
 
-## CHƯƠNG 6: KẾT LUẬN & HƯỚNG PHÁT TRIỂN
-Đồ án đã giải quyết thành công bài toán Toxic Spans Detection trên tiếng Việt với mô hình PhoBERT-BiLSTM-CRF đạt F1 vượt trội **70.31%**, triệt tiêu toàn bộ lỗi chuyển nhãn cú pháp và hiện thực hóa thành sản phẩm Web App hoàn chỉnh.
+## CHƯƠNG 6: KẾT LUẬN, ĐIỂM HẠN CHẾ & HƯỚNG PHÁT TRIỂN
+
+### 6.1. Kết luận đạt được
+Đồ án đã giải quyết thành công bài toán Toxic Spans Detection trên tiếng Việt với mô hình PhoBERT-BiLSTM-CRF đạt F1 vượt trội **70.31% (+4.03% so với baseline)**, triệt tiêu 100% lỗi chuyển nhãn cú pháp ($O \to I\text{-HOS}$) và hiện thực hóa thành sản phẩm Web App hoàn chỉnh.
+
+### 6.2. Căn cứ Điểm hạn chế để Định hướng Phát triển Tương lai
+Từ kết quả thực nghiệm và Case Study phân tích lỗi ở Chương 4, nhóm xác định rõ **3 điểm hạn chế cốt lõi** và đề xuất giải pháp phát triển tiếp theo:
+
+1. **Hạn chế 1: Nhạy cảm với tiếng lóng biến âm (Euphemism / Slang) hiếm gặp**
+   * *Hiện tượng:* Tầng BiLSTM có xu hướng bị làm mượt ngữ cảnh (over-smoothing) theo các từ ngữ trung tính xung quanh, bỏ sót các từ lóng nói giảm nói tránh (False Negative).
+   * *Hướng giải quyết:* Tích hợp **Từ điển Tiếng Lóng & Biến âm Tiếng Việt (Slang Lexicon Embeddings)** vào tầng đặc trưng đầu vào để tăng trọng số phát hiện độc lập cho các từ lóng địa phương.
+
+2. **Hạn chế 2: Độ phủ dữ liệu đối với các biến thể teencode đa dạng trên mạng xã hội**
+   * *Hiện tượng:* Bộ dữ liệu ViHOS chưa bao phủ hết các biến thể viết tắt linh hoạt của giới trẻ (*dcm, vkl, clmm, con kẹt*).
+   * *Hướng giải quyết:* Áp dụng kỹ thuật **Tăng cường Dữ liệu Tự động (Data Augmentation via Rule-based Slang Substitution)** để tự động sinh các biến thể từ lóng vào các ngữ cảnh câu trung tính trong quá trình huấn luyện.
+
+3. **Hạn chế 3: Ngữ nghĩa châm biếm sâu cay (Sarcasm) không chứa từ khóa thô tục**
+   * *Hiện tượng:* Các câu xúc phạm tinh vi, châm biếm khen đểu (*"Bạn thông minh như thế này thì xã hội tiến hóa ngược"*) không chứa từ ngữ thô tục hiển ngôn nên mô hình gán nhãn `O`.
+   * *Hướng giải quyết:* Nghiên cứu kết hợp cơ chế **Contextual Modulation / Contrastive Learning** nhằm phân biệt sắc thái mỉa mai và bổ sung phân loại ngữ cảm phụ (Sentiment-aware Span Detection).
 
 ---
 

@@ -140,7 +140,10 @@ print(f"✅ Thư mục sao lưu Drive: {CHECKPOINT_DIR}")"""),
 - **Cấu hình:** Epochs = 5, Batch size = 16, PhoBERT LR = `2e-5`, BiLSTM-CRF LR = `1e-3`
 - **Cơ chế:** Word-level Pooling + Contiguous Viterbi Decoding (Đã sửa triệt để lỗi CRF)
 - **Early Stopping:** patience = 3 trên tập DEV"""),
-    code_cell("""!python -m src.train \\
+    code_cell("""# Cài đặt tự động để đảm bảo thư viện luôn sẵn sàng kể cả khi chưa chạy Bước 3
+!pip install -q transformers pyvi pytorch-crf seqeval accelerate
+
+!python -m src.train \\
     --model_type phobert_bilstm_crf \\
     --train_path data/processed/train.json \\
     --dev_path data/processed/dev.json \\

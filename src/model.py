@@ -2,10 +2,119 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoConfig
 
-try:
-    from torchcrf import CRF
-except ImportError:
-    from TorchCRF import CRF
+from typing import List, Optional
+
+class CRF(nn.Module):
+    """
+    Pure PyTorch Linear-chain Conditional Random Field (CRF).
+    Tự chứa (Self-contained) 100%, không phụ thuộc vào bất kỳ thư viện C-extension hay pip cũ nào.
+    """
+    def __init__(self, num_tags: int, batch_first: bool = False) -> None:
+        if num_tags <= 0:
+            raise ValueError(f'invalid number of tags: {num_tags}')
+        super().__init__()
+        self.num_tags = num_tags
+        self.batch_first = batch_first
+        self.start_transitions = nn.Parameter(torch.empty(num_tags))
+        self.end_transitions = nn.Parameter(torch.empty(num_tags))
+        self.transitions = nn.Parameter(torch.empty(num_tags, num_tags))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        nn.init.uniform_(self.start_transitions, -0.1, 0.1)
+        nn.init.uniform_(self.end_transitions, -0.1, 0.1)
+        nn.init.uniform_(self.transitions, -0.1, 0.1)
+
+    def _validate(self, emissions, tags=None, mask=None):
+        if emissions.dim() != 3 or emissions.size(2) != self.num_tags:
+            raise ValueError(f'emissions shape mismatch: expected (..., {self.num_tags}), got {emissions.shape}')
+        if tags is not None and emissions.shape[:2] != tags.shape:
+            raise ValueError(f'emissions and tags shape mismatch: {emissions.shape[:2]} vs {tags.shape}')
+        if mask is not None and emissions.shape[:2] != mask.shape:
+            raise ValueError(f'emissions and mask shape mismatch: {emissions.shape[:2]} vs {mask.shape}')
+
+    def forward(self, emissions: torch.Tensor, tags: torch.LongTensor, mask: Optional[torch.Tensor] = None, reduction: str = 'sum') -> torch.Tensor:
+        self._validate(emissions, tags=tags, mask=mask)
+        if reduction not in ('none', 'sum', 'mean', 'token_mean'):
+            raise ValueError(f'invalid reduction: {reduction}')
+        if mask is None:
+            mask = torch.ones_like(tags, dtype=torch.bool)
+
+        if self.batch_first:
+            emissions = emissions.transpose(0, 1)
+            tags = tags.transpose(0, 1)
+            mask = mask.transpose(0, 1)
+
+        numerator = self._compute_score(emissions, tags, mask)
+        denominator = self._compute_normalizer(emissions, mask)
+        llh = numerator - denominator
+
+        if reduction == 'none':
+            return llh
+        if reduction == 'sum':
+            return llh.sum()
+        if reduction == 'mean':
+            return llh.mean()
+        return llh.sum() / mask.float().sum()
+
+    def decode(self, emissions: torch.Tensor, mask: Optional[torch.Tensor] = None) -> List[List[int]]:
+        self._validate(emissions, mask=mask)
+        if mask is None:
+            mask = torch.ones(emissions.shape[:2], dtype=torch.bool, device=emissions.device)
+
+        if self.batch_first:
+            emissions = emissions.transpose(0, 1)
+            mask = mask.transpose(0, 1)
+
+        return self._viterbi_decode(emissions, mask)
+
+    def _compute_score(self, emissions, tags, mask):
+        seq_length, batch_size = tags.shape
+        mask = mask.float()
+        score = self.start_transitions[tags[0]] + emissions[0, torch.arange(batch_size), tags[0]]
+        for i in range(1, seq_length):
+            score += self.transitions[tags[i - 1], tags[i]] * mask[i]
+            score += emissions[i, torch.arange(batch_size), tags[i]] * mask[i]
+        seq_ends = mask.long().sum(dim=0) - 1
+        last_tags = tags[seq_ends, torch.arange(batch_size)]
+        score += self.end_transitions[last_tags]
+        return score
+
+    def _compute_normalizer(self, emissions, mask):
+        seq_length = emissions.size(0)
+        score = self.start_transitions + emissions[0]
+        for i in range(1, seq_length):
+            broadcast_score = score.unsqueeze(2)
+            broadcast_emissions = emissions[i].unsqueeze(1)
+            next_score = broadcast_score + self.transitions + broadcast_emissions
+            next_score = torch.logsumexp(next_score, dim=1)
+            score = torch.where(mask[i].unsqueeze(1), next_score, score)
+        score += self.end_transitions
+        return torch.logsumexp(score, dim=1)
+
+    def _viterbi_decode(self, emissions, mask) -> List[List[int]]:
+        seq_length, batch_size = mask.shape
+        score = self.start_transitions + emissions[0]
+        history = []
+        for i in range(1, seq_length):
+            broadcast_score = score.unsqueeze(2)
+            broadcast_emission = emissions[i].unsqueeze(1)
+            next_score = broadcast_score + self.transitions + broadcast_emission
+            next_score, indices = next_score.max(dim=1)
+            score = torch.where(mask[i].unsqueeze(1), next_score, score)
+            history.append(indices)
+        score += self.end_transitions
+        seq_ends = mask.long().sum(dim=0) - 1
+        best_tags_list = []
+        for idx in range(batch_size):
+            _, best_last_tag = score[idx].max(dim=0)
+            best_tags = [best_last_tag.item()]
+            for hist in reversed(history[:seq_ends[idx]]):
+                best_last_tag = hist[idx][best_tags[-1]]
+                best_tags.append(best_last_tag.item())
+            best_tags.reverse()
+            best_tags_list.append(best_tags)
+        return best_tags_list
 
 from .utils import NUM_LABELS, IGNORE_INDEX
 

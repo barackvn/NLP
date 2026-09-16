@@ -212,6 +212,139 @@ class PhoBERT_BiLSTM_CRF(nn.Module):
             return self.crf.decode(emissions, mask=mask)
 
 
+class PhoBERT_DualHead_BiLSTM_CRF(nn.Module):
+    """
+    Kiến trúc Đề xuất SOTA Đa nhiệm Đầu kép (Dual-Head Multi-Task Learning):
+      - Branch 1 (Token/Span Head): PhoBERT + BiLSTM + Linear + CRF (Dự đoán chuỗi nhãn B-HOS, I-HOS, O cấp từ)
+      - Branch 2 (Clause/Sentence Intent Head): PhoBERT + Intent MLP (Dự đoán xác suất câu/mệnh đề có chứa ý đồ độc hại)
+      - Gated Fusion: Dập tắt nhãn toxic (gán về 'O') nếu Intent Head phán quyết mệnh đề/câu là phi độc hại.
+    """
+    def __init__(
+        self,
+        pretrained_name: str = "vinai/phobert-base-v2",
+        num_labels: int = NUM_LABELS,
+        lstm_hidden_size: int = 256,
+        lstm_layers: int = 1,
+        dropout_p: float = 0.3
+    ):
+        super(PhoBERT_DualHead_BiLSTM_CRF, self).__init__()
+        self.num_labels = num_labels
+        self.config = AutoConfig.from_pretrained(pretrained_name)
+        self.phobert = AutoModel.from_pretrained(pretrained_name, config=self.config)
+        embed_dim = self.config.hidden_size # 768
+
+        self.dropout = nn.Dropout(dropout_p)
+
+        # Nhánh 1: Token Span Head (BiLSTM + CRF)
+        self.bilstm = nn.LSTM(
+            input_size=embed_dim,
+            hidden_size=lstm_hidden_size,
+            num_layers=lstm_layers,
+            bidirectional=True,
+            batch_first=True
+        )
+        self.classifier = nn.Linear(lstm_hidden_size * 2, num_labels)
+        self.crf = CRF(num_tags=num_labels, batch_first=True)
+
+        # Nhánh 2: Sentence/Clause Intent Head
+        self.intent_head = nn.Sequential(
+            nn.Linear(embed_dim, 256),
+            nn.GELU(),
+            nn.Dropout(dropout_p),
+            nn.Linear(256, 1)
+        )
+        self.bce_loss_fct = nn.BCEWithLogitsLoss()
+
+    def forward(
+        self,
+        input_ids,
+        attention_mask,
+        word_indices=None,
+        word_mask=None,
+        labels=None,
+        valid_mask=None,
+        sentence_labels=None,
+        lambda_intent: float = 0.5
+    ):
+        outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
+        sequence_output = self.dropout(outputs.last_hidden_state)
+
+        # 1. Nhánh Intent: Trích xuất CLS token embedding
+        cls_token = sequence_output[:, 0, :]
+        intent_logits = self.intent_head(cls_token).squeeze(-1)
+
+        # 2. Nhánh Span: Word-level pooling
+        if word_indices is not None:
+            dim = sequence_output.size(-1)
+            idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+            feats = torch.gather(sequence_output, 1, idx_exp)
+            mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
+        else:
+            feats = sequence_output
+            mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+
+        lstm_out, _ = self.bilstm(feats)
+        lstm_out = self.dropout(lstm_out)
+        emissions = self.classifier(lstm_out)
+
+        if labels is not None:
+            clean_labels = labels.clone()
+            clean_labels[clean_labels == IGNORE_INDEX] = 0
+            nll_loss = -self.crf(emissions, clean_labels, mask=mask, reduction='mean')
+
+            # Tự động trích xuất binary intent nhãn từ chuỗi BIO nếu chưa có
+            if sentence_labels is None:
+                sentence_labels = (labels.clamp(min=0) > 0).any(dim=-1).float()
+            intent_loss = self.bce_loss_fct(intent_logits, sentence_labels)
+
+            total_loss = nll_loss + lambda_intent * intent_loss
+            return total_loss, (emissions, intent_logits)
+        else:
+            best_paths = self.crf.decode(emissions, mask=mask)
+            intent_probs = torch.sigmoid(intent_logits)
+            return best_paths, intent_probs
+
+    def decode(
+        self,
+        input_ids,
+        attention_mask,
+        word_indices=None,
+        word_mask=None,
+        valid_mask=None,
+        intent_threshold: float = 0.5
+    ):
+        self.eval()
+        with torch.no_grad():
+            outputs = self.phobert(input_ids=input_ids, attention_mask=attention_mask)
+            sequence_output = self.dropout(outputs.last_hidden_state)
+            cls_token = sequence_output[:, 0, :]
+            intent_logits = self.intent_head(cls_token).squeeze(-1)
+            intent_probs = torch.sigmoid(intent_logits)
+
+            if word_indices is not None:
+                dim = sequence_output.size(-1)
+                idx_exp = word_indices.unsqueeze(-1).expand(-1, -1, dim)
+                feats = torch.gather(sequence_output, 1, idx_exp)
+                mask = word_mask.bool() if word_mask is not None else torch.ones(feats.size(0), feats.size(1), dtype=torch.bool, device=feats.device)
+            else:
+                feats = sequence_output
+                mask = attention_mask.bool() if valid_mask is None else (attention_mask.bool() & valid_mask.bool())
+
+            lstm_out, _ = self.bilstm(feats)
+            emissions = self.classifier(lstm_out)
+            raw_paths = self.crf.decode(emissions, mask=mask)
+
+            # Gated Fusion: Nếu intent_prob < threshold, dập tắt nhãn về O
+            gated_paths = []
+            for i, path in enumerate(raw_paths):
+                prob = intent_probs[i].item() if intent_probs.dim() > 0 else intent_probs.item()
+                if prob < intent_threshold:
+                    gated_paths.append([0] * len(path))
+                else:
+                    gated_paths.append(path)
+            return gated_paths, intent_probs.tolist()
+
+
 class PhoBERT_CRF(nn.Module):
     """
     Baseline bóc tách 1 (Ablation Baseline):

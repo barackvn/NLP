@@ -7,22 +7,26 @@ from tqdm import tqdm
 
 from .utils import set_seed, get_device, setup_logger, save_checkpoint
 from .dataset import ViHOSDataset, vihos_collate_fn
-from .model import PhoBERT_BiLSTM_CRF, PhoBERT_CRF, PhoBERT_Linear
+from .model import PhoBERT_BiLSTM_CRF, PhoBERT_CRF, PhoBERT_Linear, PhoBERT_DualHead_BiLSTM_CRF
 from .evaluate import evaluate_model
 
 def get_optimizer_and_scheduler(model, model_type, lr_phobert=2e-5, lr_head=1e-3, weight_decay=0.01, total_steps=1000):
     """
     Thiết lập Differential Learning Rate:
     - PhoBERT Backbone: lr nhỏ (2e-5) để bảo toàn tri thức pre-trained.
-    - Head Layers (BiLSTM, Classifier, CRF): lr lớn hơn (1e-3) để học biểu diễn bài toán mới.
+    - Head Layers (BiLSTM, Classifier, CRF, Intent Head): lr lớn hơn (1e-3) để học biểu diễn bài toán mới.
     """
-    if model_type == "phobert_bilstm_crf":
+    if model_type in ("phobert_bilstm_crf", "phobert_dualhead_bilstm_crf"):
         optimizer_grouped_parameters = [
             {"params": model.phobert.parameters(), "lr": lr_phobert, "weight_decay": weight_decay},
             {"params": model.bilstm.parameters(), "lr": lr_head, "weight_decay": weight_decay},
             {"params": model.classifier.parameters(), "lr": lr_head, "weight_decay": weight_decay},
             {"params": model.crf.parameters(), "lr": lr_head, "weight_decay": weight_decay}
         ]
+        if hasattr(model, "intent_head"):
+            optimizer_grouped_parameters.append(
+                {"params": model.intent_head.parameters(), "lr": lr_head, "weight_decay": weight_decay}
+            )
     elif model_type == "phobert_crf":
         optimizer_grouped_parameters = [
             {"params": model.phobert.parameters(), "lr": lr_phobert, "weight_decay": weight_decay},
@@ -70,6 +74,8 @@ def train_pipeline(args):
     logger.info(f"Initializing model architecture: {args.model_type}...")
     if args.model_type == "phobert_bilstm_crf":
         model = PhoBERT_BiLSTM_CRF(pretrained_name=args.pretrained_name, dropout_p=args.dropout)
+    elif args.model_type == "phobert_dualhead_bilstm_crf":
+        model = PhoBERT_DualHead_BiLSTM_CRF(pretrained_name=args.pretrained_name, dropout_p=args.dropout)
     elif args.model_type == "phobert_crf":
         model = PhoBERT_CRF(pretrained_name=args.pretrained_name, dropout_p=args.dropout)
     elif args.model_type == "phobert_linear":
@@ -147,7 +153,7 @@ def train_pipeline(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Huấn luyện mô hình ViHOS Toxic Spans Detection")
-    parser.add_argument("--model_type", type=str, default="phobert_bilstm_crf", choices=["phobert_bilstm_crf", "phobert_crf", "phobert_linear"])
+    parser.add_argument("--model_type", type=str, default="phobert_dualhead_bilstm_crf", choices=["phobert_dualhead_bilstm_crf", "phobert_bilstm_crf", "phobert_crf", "phobert_linear"])
     parser.add_argument("--train_path", type=str, default="data/processed/train.json")
     parser.add_argument("--dev_path", type=str, default="data/processed/dev.json")
     parser.add_argument("--pretrained_name", type=str, default="vinai/phobert-base-v2")

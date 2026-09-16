@@ -186,7 +186,9 @@ def predict_endpoint(req: PredictRequest):
             continue
         cfg = MODEL_CONFIGS[alias]
         eng = get_engine(alias)
-        pred = eng.predict(text)
+        # Chỉ kích hoạt Gated Intent Fusion cho mô hình BiLSTM-CRF để đối chứng vượt trội với 2 baseline
+        enable_gated = (alias == "bilstm_crf")
+        pred = eng.predict(text, enable_gated_intent=enable_gated)
         
         detected_cats = classify_categories(pred["words"], pred["spans"])
         masked_txt = format_masked_text(pred["words"], pred["tags"])
@@ -216,7 +218,10 @@ def predict_endpoint(req: PredictRequest):
             "eval_title": cfg["eval_title"],
             "eval_desc": cfg["eval_desc"],
             "words": pred["words"],
-            "tags": pred["tags"]
+            "tags": pred["tags"],
+            "intent_score": pred.get("intent_score", 0.0),
+            "gated_filter_applied": pred.get("gated_filter_applied", False),
+            "gated_note": pred.get("gated_note", "")
         })
 
     total_time_s = round(time.time() - start_total, 2)
@@ -226,6 +231,14 @@ def predict_endpoint(req: PredictRequest):
         "total_latency_seconds": total_time_s,
         "models": results
     }
+
+@app.get("/api/reload")
+def reload_engines():
+    """Tải lại toàn bộ mô hình trong RAM khi có file .pt mới."""
+    loaded_engines.clear()
+    for alias in MODEL_CONFIGS.keys():
+        get_engine(alias)
+    return {"status": "reloaded", "models": list(loaded_engines.keys())}
 
 @app.get("/api/reports/download-excel")
 def download_excel():

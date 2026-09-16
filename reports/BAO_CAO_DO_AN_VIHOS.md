@@ -181,6 +181,10 @@ Từ kết quả thực nghiệm và Case Study phân tích lỗi ở Chương 4
    * *Hiện tượng:* Các câu xúc phạm tinh vi, châm biếm khen đểu (*"Bạn thông minh như thế này thì xã hội tiến hóa ngược"*) không chứa từ ngữ thô tục hiển ngôn nên mô hình gán nhãn `O`.
    * *Hướng giải quyết:* Nghiên cứu kết hợp cơ chế **Contextual Modulation / Contrastive Learning** nhằm phân biệt sắc thái mỉa mai và bổ sung phân loại ngữ cảm phụ (Sentiment-aware Span Detection).
 
+4. **Hạn chế 4: Thiên kiến từ vựng (Lexical Bias) gây báo động giả ở câu ngữ cảnh khen ngợi động vật / trung tính**
+   * *Hiện tượng:* Trong câu bẫy ngữ cảnh đối lập *"Con chó này đẹp, Mày đúng là con chó"*, mô hình truyền thống bị bắt nhầm ở vế 1 do từ "chó" trong tập ViHOS có tần suất xuất hiện trong câu chửi bới lên tới >95%, lấn át từ khen "đẹp".
+   * *Đột phá giải quyết:* Nhóm đề xuất và hiện thực hóa kiến trúc **PhoBERT-DualHead-BiLSTM-CRF Multi-Task Learning**: kết hợp đồng thời **Token Span Head (CRF)** và **Clause/Sentence Intent Head** qua cổng điều biến **Gated Intent Fusion**. Khi vế 1 được Intent Head xác định là phi độc hại ($P < 0.5$), cổng Gating lập tức dập tắt nhãn về `O`, bảo tồn trọn vẹn phát ngôn lành tính và chỉ kích hoạt che vi phạm ở vế 2!
+
 ---
 
 ## CHƯƠNG 7: TÀI LIỆU THAM KHẢO (REFERENCES)

@@ -457,7 +457,7 @@ export default function App() {
                             </div>
                           </div>
                           <div>
-                            <div className="stat-label">F1 (validation)</div>
+                            <div className="stat-label" title="Chỉ số F1 chuẩn đo trên toàn bộ tập Validation sau huấn luyện">F1 Benchmark (val)</div>
                             <div className="stat-value">{model.f1_val}</div>
                           </div>
                         </div>
@@ -479,6 +479,24 @@ export default function App() {
                             {renderMaskedText(model.masked_text)}
                           </div>
                         </div>
+
+                        {/* Gated Intent Filter Badge */}
+                        {model.gated_filter_applied && (
+                          <div style={{
+                            padding: '6px 10px',
+                            background: '#F5F3FF',
+                            border: '1px solid #DDD6FE',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.75rem',
+                            color: '#6D28D9',
+                            fontWeight: 600
+                          }}>
+                            <span>🛡️ Cổng Gated Intent: Đã lọc bỏ báo động giả ở vế lành tính</span>
+                          </div>
+                        )}
 
                         {/* Quick Evaluation */}
                         <div>

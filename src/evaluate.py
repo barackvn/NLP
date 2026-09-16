@@ -124,11 +124,11 @@ if __name__ == "__main__":
     from torch.utils.data import DataLoader
     from transformers import AutoTokenizer
     from .dataset import ViHOSDataset, vihos_collate_fn
-    from .model import PhoBERT_BiLSTM_CRF, PhoBERT_CRF, PhoBERT_Linear
+    from .model import PhoBERT_BiLSTM_CRF, PhoBERT_CRF, PhoBERT_Linear, PhoBERT_DualHead_BiLSTM_CRF
     from .utils import load_checkpoint, get_device
 
     parser = argparse.ArgumentParser(description="Đánh giá mô hình ViHOS Toxic Spans Detection")
-    parser.add_argument("--model_type", type=str, required=True, choices=["phobert_bilstm_crf", "phobert_crf", "phobert_linear"])
+    parser.add_argument("--model_type", type=str, required=True, choices=["phobert_dualhead_bilstm_crf", "phobert_bilstm_crf", "phobert_crf", "phobert_linear"])
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--test_path", type=str, default="data/processed/test.json")
     parser.add_argument("--pretrained_name", type=str, default="vinai/phobert-base-v2")
@@ -147,7 +147,9 @@ if __name__ == "__main__":
         collate_fn=lambda b: vihos_collate_fn(b, pad_token_id=tokenizer.pad_token_id)
     )
 
-    if args.model_type == "phobert_bilstm_crf":
+    if args.model_type == "phobert_dualhead_bilstm_crf":
+        model = PhoBERT_DualHead_BiLSTM_CRF(pretrained_name=args.pretrained_name)
+    elif args.model_type == "phobert_bilstm_crf":
         model = PhoBERT_BiLSTM_CRF(pretrained_name=args.pretrained_name)
     elif args.model_type == "phobert_crf":
         model = PhoBERT_CRF(pretrained_name=args.pretrained_name)

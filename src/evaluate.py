@@ -69,6 +69,8 @@ def evaluate_model(model, dataloader, device):
             
             # Giải mã nhãn dự đoán qua decode method cấp độ word
             predictions = model.decode(input_ids, attention_mask, word_indices=word_indices, word_mask=word_mask)
+            if isinstance(predictions, tuple):
+                predictions = predictions[0]
             
             labels_np = labels.cpu().numpy()
             mask_np = word_mask.cpu().numpy() if word_mask is not None else batch.get("valid_mask", torch.ones_like(labels)).cpu().numpy()

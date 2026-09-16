@@ -311,7 +311,8 @@ class PhoBERT_DualHead_BiLSTM_CRF(nn.Module):
         word_indices=None,
         word_mask=None,
         valid_mask=None,
-        intent_threshold: float = 0.5
+        intent_threshold: float = 0.5,
+        return_intent: bool = False
     ):
         self.eval()
         with torch.no_grad():
@@ -342,7 +343,10 @@ class PhoBERT_DualHead_BiLSTM_CRF(nn.Module):
                     gated_paths.append([0] * len(path))
                 else:
                     gated_paths.append(path)
-            return gated_paths, intent_probs.tolist()
+            
+            if return_intent:
+                return gated_paths, intent_probs.tolist()
+            return gated_paths
 
 
 class PhoBERT_CRF(nn.Module):

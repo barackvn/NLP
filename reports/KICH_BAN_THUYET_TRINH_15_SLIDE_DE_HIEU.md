@@ -1,132 +1,136 @@
-# KỊCH BẢN THUYẾT TRÌNH 15 SLIDE TINH GỌN (NGÔN NGỮ ĐỜI THƯỜNG, DỄ NÓI)
-## ĐỒ ÁN: NHẬN DIỆN CHUỖI TỪ NGỮ XÚC PHẠM TIẾNG VIỆT (ViHOS) BẰNG PhoBERT-BiLSTM-CRF
-**Trường:** Đại học Công nghệ Thông tin – ĐHQG TP.HCM (UIT)  
-**Thời lượng chuẩn:** 10 – 12 phút (Khoảng 45 – 50 giây / slide)  
-**File PowerPoint:** `Bao_Cao_Do_An_ViHOS_15_Slide.pptx`
+# KỊCH BẢN LUYỆN NÓI 15 MỤC — ĐỒNG BỘ HÌNH MỚI
 
----
+Bản trình chiếu chính có 18 slide. Tệp này giữ tên cũ để tương thích, nhưng 15 mục dưới đây là lựa chọn luyện nói, không phải một PowerPoint 15 trang mới. Dùng bản đầy đủ trong `SLIDES_THUYET_TRINH_18_TRANG.md` khi trình bày.
 
-### PHẦN I: MỞ ĐẦU & ĐẶT VẤN ĐỀ (Slide 01 – 03)
-*Người trình bày: **Dương Quốc Thương** (26410127) - Trưởng nhóm*
+## Mục 1 (slide 1) — Giới thiệu | 25 giây
 
-#### 🎙️ SLIDE 01: Bìa Báo Cáo
-* **Lời thoại mở màn:**
-  > "Kính thưa quý Thầy trong Hội đồng chấm đồ án môn Xử lý Ngôn ngữ Tự nhiên. Hôm nay nhóm chúng em gồm 5 thành viên xin phép báo cáo đề tài: **Cải tiến phương pháp nhận diện chuỗi từ ngữ xúc phạm tiếng Việt bằng mô hình PhoBERT-BiLSTM-CRF trên bộ dữ liệu chuẩn ViHOS EACL 2023**.  
-  > Nhóm gồm em là Dương Quốc Thương - trưởng nhóm, bạn Nông Nguyễn Thành phụ trách dữ liệu, bạn Hoàng Võ Minh Tuấn phụ trách huấn luyện, bạn Bùi Quốc Thịnh phụ trách thực nghiệm và bạn Trần Tiến Dũng phụ trách phát triển ứng dụng Web."
+“Em xin chào Thầy và các bạn. Nhóm em trình bày bài toán tìm cụm xúc phạm trong bình luận tiếng Việt. Bản cập nhật so sánh Linear, CRF và mô hình BiLSTM–CRF có DualHead. Em sẽ giải thích từng tầng bằng lời đơn giản, sau đó trình bày các hình kết quả mới.”
 
-#### 🎙️ SLIDE 02: Mục Lục Báo Cáo
-* **Lời thoại:**
-  > "Bài báo cáo của tụi em được gói gọn trong **15 slide tinh gọn qua 5 phần chính**:  
-  > 1. Đặt vấn đề và ý tưởng cốt lõi.  
-  > 2. Dữ liệu ViHOS và mẹo giải quyết từ ghép tiếng Việt.  
-  > 3. Mô hình 3 tầng và cách huấn luyện khôn ngoan trên GPU.  
-  > 4. Bảng vàng so sánh 3 trường phái và ca nghiên cứu từ lóng thực tế.  
-  > 5. Demo sản phẩm Web App chạy thực tế và tổng kết."
+## Mục 2 (slide 2) — Bài toán và lý do thực hiện | 45 giây
 
-#### 🎙️ SLIDE 03: Ý Tưởng Cốt Lõi: "Nhặt Quả Táo Sâu Thay Vì Vứt Cả Giỏ"
-* **Lời thoại:**
-  > "Kính thưa Thầy, phát ngôn thù ghét trên mạng xã hội hiện nay rất phổ biến. Cách làm truyền thống trước đây là **phân loại cả câu**, tức là máy thấy trong câu có từ bậy thì nó gán nhãn 1 và **xóa luôn cả câu văn**.  
-  > Điều này giống như việc *'trong một giỏ táo có 1 quả bị sâu mà chúng ta vứt đi cả giỏ táo lành'*. Người dùng có khi viết một bình luận dài 50 từ rất tâm huyết nhưng lỡ chêm 1 từ bậy, nếu xóa cả câu thì mất đi mạch tranh luận văn minh.  
-  > Vì vậy, nhóm em chọn bài toán **Toxic Spans Detection**: Tụi em nhặt đúng quả táo sâu để khoét bỏ (tự động che `***` cụm từ bậy), giữ lại 99% nội dung hữu ích còn lại của người dùng."
+“Khi có nhiều bình luận, đọc từng câu để tìm nội dung xúc phạm sẽ mất thời gian. Tiếng Việt còn có từ lóng và cách viết biến dạng nên việc nhận ra chúng không đơn giản.
 
----
+Nhóm muốn xây dựng hệ thống chỉ ra đúng từ hoặc cụm cần xem lại, đồng thời hạn chế bỏ sót và đánh dấu nhầm.
 
-### PHẦN II: DỮ LIỆU & TIỀN XỬ LÝ (Slide 04 – 06)
-*Người trình bày: **Nông Nguyễn Thành** (26410115) - Data & NLP Core*
+Kết quả giúp người kiểm duyệt biết phần nào cần chú ý. Nhóm so sánh các cách làm để chọn hướng phù hợp, sau đó đưa lên ứng dụng web.”
 
-#### 🎙️ SLIDE 04: Bộ Dữ Liệu Chuẩn ViHOS Benchmark (EACL 2023)
-* **Lời thoại:**
-  > "Kính chào Thầy, em là Thành phụ trách dữ liệu. Tụi em sử dụng bộ dữ liệu chuẩn **ViHOS của Hội nghị quốc tế EACL 2023** gồm hơn **11.000 câu bình luận thực tế**, chia theo tỷ lệ vàng: 80% Train, 10% Dev và 10% Test.  
-  > Khó khăn lớn nhất tụi em gặp phải là **sự mất cân bằng dữ liệu cực lớn**: Từ sạch bình thường (nhãn O) chiếm tới **88.5%**, trong khi từ chửi (B-HOS, I-HOS) chỉ có hơn **11%**.  
-  > Nếu mô hình lười biếng đoán bừa tất cả là từ sạch thì vẫn đúng 88%, nhưng lại bỏ lọt 100% từ bậy. Điều này đòi hỏi mô hình phải có khả năng hiểu ngữ cảnh rất sâu."
+## Mục 3 (slide 3) — Đầu vào, đầu ra và ba nhãn BIO | 45 giây
 
-#### 🎙️ SLIDE 05: Khó Khăn Tiếng Việt: Từ Ghép & Teencode Né Lọc
-* **Lời thoại:**
-  > "Tiếng Việt trên mạng xã hội có 3 cái bẫy rất khó:  
-  > 1. **Bẫy từ ghép:** Ví dụ từ *'mất dạy'*, nếu máy chém cụt chữ *'mất'* (động từ) bỏ chữ *'dạy'* (giáo dục) thì mất hẳn ý nghĩa xúc phạm.  
-  > 2. **Teencode né lọc:** Người dùng cố tình viết tắt hay chệch âm như *'đm'* thành *'đcm'*, *'vcl'* thành *'vkl'*, *'lồn'* viết thành *'l0n'* khiến các bộ lọc từ điển tĩnh hoàn toàn bất lực.  
-  > 3. **Tiếng lóng giảm thanh:** Dùng từ sạch để chửi xéo, ví dụ như câu *'đắt như con kẹt'*. Từ *'kẹt'* vốn dĩ là từ sạch (kẹt xe), nhưng ở đây là từ bậy nói tránh."
+“Đầu vào là một bình luận tiếng Việt. Đầu ra là các cụm xúc phạm được tìm thấy.
 
-#### 🎙️ SLIDE 06: Mẹo Xử Lý Từ Chẻ Nhỏ: First-Token Subword Alignment
-* **Lời thoại:**
-  > "Khi đưa tiếng Việt vào mô hình PhoBERT, PhoBERT dùng thuật toán BPE nên nó **chẻ từ ghép ra như chẻ củi**. Ví dụ từ *'mất_dạy'* bị chẻ thành 2 mẩu: *'mất@@'* và *'dạy'*.  
-  > Trong khi bộ dữ liệu gốc chỉ có 1 nhãn, làm máy bị lệch kích thước và báo lỗi ngay.  
-  > Nhóm em giải quyết bằng mẹo **First-token Alignment**: Mẩu đầu tiên (*'mất@@'*) tụi em dán đúng nhãn gốc; còn mẩu đuôi (*'dạy'*), tụi em dán nhãn đặc biệt là **-100** để máy **tự động bỏ qua không tính điểm**. Nhờ mẹo này, mô hình học êm ru mà không bao giờ bị lệch ranh giới từ."
+Để đánh dấu vị trí, nhóm dùng ba nhãn: B là bắt đầu cụm, I là tiếp tục cụm, O là ngoài cụm.
 
----
+Ví dụ ‘Bạn nói thật ngu’, từ ‘ngu’ là cụm cần đánh dấu trong ví dụ này nên nhận B; những từ còn lại nhận O. Nếu câu có nhiều cụm riêng biệt thì mỗi cụm bắt đầu lại bằng B.”
 
-### PHẦN III: MÔ HÌNH & HUẤN LUYỆN (Slide 07 – 08)
-*Người trình bày: **Hoàng Võ Minh Tuấn** (26410146) - Model Trainer*
+**Nhớ:** Đây là ví dụ minh họa nhãn, không phải kết quả kiểm tra mô hình.
 
-#### 🎙️ SLIDE 07: Mô Hình 3 Tầng: 3 'Chuyên Gia' Phối Hợp
-* **Lời thoại:**
-  > "Kính thưa Thầy, em là Tuấn phụ trách huấn luyện. Kiến trúc của nhóm kết hợp nhịp nhàng 3 'chuyên gia':  
-  > 1. **Tầng 1 - PhoBERT:** Là 'chuyên gia tiếng Việt', đã đọc hàng triệu câu văn trên mạng nên hiểu sâu sắc ngữ cảnh từ vựng.  
-  > 2. **Tầng 2 - BiLSTM:** Là 'chuyên gia trí nhớ dai', đọc câu xuôi rồi đọc ngược để nhớ cả câu trước lẫn câu sau, không bao giờ bỏ sót các cụm chửi ở xa.  
-  > 3. **Tầng 3 - CRF:** Là 'trọng tài giữ luật', bắt buộc từ sau phải đi đúng luật với từ trước, tuyệt đối cấm nhãn I nhảy xổ ra khi chưa có nhãn B mở đầu."
+## Mục 4 (slide 4) — Dữ liệu ViHOS | 35 giây
 
-#### 🎙️ SLIDE 08: Chiến Lược Huấn Luyện Khôn Ngoan Trên Colab GPU
-* **Lời thoại:**
-  > "Để huấn luyện mô hình hiệu quả trên GPU Tesla T4 của Colab, nhóm dùng **mẹo học phân tầng (Differential Learning Rate)**:  
-  > * Phần PhoBERT vốn đã rất giỏi tiếng Việt rồi, nên tụi em chỉ cho học thật chậm (LR = 2e-5) để không bị 'quên gốc'.  
-  > * Phần BiLSTM và CRF mới thêm vào chưa biết gì, nên tụi em cho học nhanh gấp 50 lần (LR = 1e-3) để mau thuộc bài.  
-  > Đồng thời, tụi em cắt độ dài câu ở mức 128 từ (bao phủ 98.7% số câu), giúp máy chạy nhanh gấp 2.5 lần và không bao giờ bị tràn VRAM."
+“Dữ liệu gồm hơn 11 nghìn bình luận đã có nhãn. Nhóm chia thành phần để học, phần để chọn mô hình và phần để kiểm tra cuối cùng.
 
----
+Phần lớn từ trong dữ liệu nằm ngoài cụm xúc phạm. Vì vậy, chỉ đếm số từ đoán đúng là chưa đủ. Nhóm cần đo xem mô hình tìm được bao nhiêu cụm và có đánh dấu nhầm hay không.”
 
-### PHẦN IV: KẾT QUẢ THỰC NGHIỆM & CA 'CON KẸT' (Slide 09 – 12)
-*Người trình bày: **Bùi Quốc Thịnh** (26410108) - Evaluation & Metrics*
+## Mục 5 (slide 5) — Ba mô hình trong bộ so sánh mới | 60 giây
 
-#### 🎙️ SLIDE 09: Bảng Vàng So Sánh Bản Chất 3 Trường Phái
-* **Lời thoại:**
-  > "Kính thưa Hội đồng, em là Thịnh phụ trách đánh giá. Đây là bảng so sánh đắt giá nhất của đồ án trên toàn bộ 1.106 câu kiểm thử:  
-  > 1. **Mô hình 1 - PhoBERT-Linear (Baseline của Thầy):** Giống như *'Người gác cổng vội vàng'*, nhìn từng từ rồi đoán mò độc lập, không quan sát xung quanh, nên mắc tới 26.4% lỗi cú pháp vô lý.  
-  > 2. **Mô hình 2 - PhoBERT-CRF:** Giống như *'Trọng tài nghiêm ngặt'*, bắt đúng luật chuyển nhãn nên **triệt tiêu 100% lỗi cú pháp**, F1 tăng lên 68.61%.  
-  > 3. **Mô hình 3 - PhoBERT-BiLSTM-CRF (Đề xuất của nhóm):** Giống như *'Thám tử toàn diện'*, vừa nhớ dai vừa thuộc luật, bóc tách chuẩn xác ranh giới từ ghép và đạt **Span-F1 cao nhất là 70.31% (tăng hơn 4% so với baseline)**."
+“Cả ba mô hình đều dùng PhoBERT để tạo thông tin về từ trong ngữ cảnh.
 
-#### 🎙️ SLIDE 10: Đột Phá Của Tầng CRF: Triệt Tiêu 100% Lỗi Vô Lý
-* **Lời thoại:**
-  > "Nhìn vào biểu đồ bên phải, Thầy sẽ thấy điều kỳ diệu của tầng CRF:  
-  > Ở mô hình cũ, lỗi phi lý 'nhãn I tự nhiên xuất hiện mà không có nhãn B' chiếm tới hơn một phần tư (26.4%).  
-  > Nhờ CRF đặt mức phạt cực nặng vào thuật toán Viterbi, **tỷ lệ lỗi này rớt thẳng từ 26.4% về đúng 0.0%**. Đồng thời lỗi chém cụt từ ghép giảm từ 25.8% xuống 14.6%."
+Linear chọn nhãn cho từng vị trí. CRF xét thêm quan hệ giữa các nhãn. Mô hình thứ ba dùng BiLSTM–CRF để tìm cụm, đồng thời có đầu kiểm tra cả câu và cổng lọc.
 
-#### 🎙️ SLIDE 11: Đột Phá Của Tầng BiLSTM: Bắt Trọn Câu Đa Cụm Xúc Phạm
-* **Lời thoại:**
-  > "Trong thực tế, hơn 30% câu chửi trên mạng có từ 2 cụm vi phạm cách xa nhau.  
-  > Các mô hình cũ thường chỉ bắt được cụm đầu rồi quên mất cụm sau. Nhờ BiLSTM có bộ nhớ hai chiều xuôi ngược, mô hình của nhóm **tăng thêm 5.8% độ bắt trúng (Recall)** trên các câu đa cụm phức tạp này."
+Bộ hình mới so sánh ba cấu hình này. Vì mô hình cuối có cả BiLSTM và DualHead, nhóm chưa thể chỉ dựa vào ba dòng kết quả để kết luận riêng từng phần đóng góp bao nhiêu. Trang tiếp theo giải thích vai trò của từng tầng.”
 
-#### 🎙️ SLIDE 12: Ca Thực Tế Thú Vị: Vì Sao Mô Hình Sót Từ 'Con Kẹt'?
-* **Lời thoại:**
-  > "Tụi em xin chia sẻ một ca phân tích lỗi thực tế rất thú vị:  
-  > Khi test câu: *'Món ăn của quán này bình thường nhưng giá cả hơi đắt như con kẹt'*, mô hình cũ của Thầy lại bắt được từ *'con kẹt'*, nhưng mô hình hiện đại của tụi em lại bỏ sót!  
-  > **Vì sao lại như vậy?**  
-  > Vì vế trước câu là lời khen chê món ăn quá đàng hoàng, lịch sự, nên trí nhớ dài của BiLSTM bị 'lừa', tưởng cả câu đều là câu văn minh, làm mờ đi tín hiệu từ bậy ở cuối câu.  
-  > Việc trung thực chỉ ra ca lỗi này chứng minh tụi em hiểu sâu bản chất mô hình và đây là căn cứ để tụi em xây dựng từ điển tiếng lóng sau này."
+## Mục 6 (slide 6) — Mỗi tầng làm một việc gì? | 60 giây
 
----
+“Có thể hiểu phương pháp của nhóm như một nhóm làm việc, mỗi phần phụ trách một việc.
 
-### PHẦN V: SẢN PHẨM WEB APP & TỔNG KẾT (Slide 13 – 15)
-*Người trình bày: **Trần Tiến Dũng** (26410024) & **Dương Quốc Thương** (26410127)*
+PhoBERT giống người đọc câu: tạo thông tin về từ trong ngữ cảnh.
 
-#### 🎙️ SLIDE 13: Web App Client-Server Bật 1 Lệnh 'npm run dev' (Dũng)
-* **Lời thoại:**
-  > "Kính thưa Thầy, em là Dũng phụ trách sản phẩm. Tụi em đã loại bỏ hoàn toàn Streamlit vì hay bị đơ máy trên Windows để xây dựng hệ thống **Client-Server công nghiệp**:  
-  > * Backend dùng **FastAPI**: nạp sẵn 3 mô hình AI vào RAM, trả kết quả cực nhanh chỉ trong **0.1 giây**.  
-  > * Frontend dùng **React 19**: giao diện hiện đại toàn màn hình.  
-  > * Đột phá vận hành: Tụi em gom chung lại, chỉ cần gõ đúng 1 lệnh **'npm run dev'** là cả Web và AI cùng chạy, khi tắt chỉ bấm `Ctrl + C` là tắt sạch trong chớp mắt."
+BiLSTM giống sổ tay đọc hai chiều: nối thông tin phía trước và phía sau.
 
-#### 🎙️ SLIDE 14: Demo Tính Năng Web App Thực Tế (Dũng)
-* **Lời thoại:**
-  > "Trên màn hình demo của tụi em có 3 tính năng đắt giá:  
-  > 1. Vừa nhập câu vào là máy **bôi đỏ ngay lập tức các từ xúc phạm** để người duyệt nhìn thấy ngay.  
-  > 2. Khung **Auto-Masking** bên cạnh tự động thay từ bậy bằng dấu `***`, giữ nguyên các từ sạch xung quanh.  
-  > 3. Nút trạng thái **'🟢 3/3 Mô hình Sẵn sàng'** trên góc màn hình cho phép bấm vào kiểm tra sức khỏe của cả 3 mô hình AI nạp thật 100%."
+CRF kiểm tra quan hệ giữa các nhãn rồi chọn cả chuỗi nhãn. Nó giúp giảm nhãn thiếu hợp lý, nhưng không bảo đảm hết mọi lỗi.
 
-#### 🎙️ SLIDE 15: Tổng Kết Đồ Án & Lời Cảm Ơn (Thương)
-* **Lời thoại:**
-  > "Kính thưa quý Thầy trong Hội đồng, tóm lại đồ án của nhóm đã đạt được 3 thành quả:  
-  > 1. Nâng Span-F1 lên **70.31% (+4.03%)**.  
-  > 2. Triệt tiêu 100% lỗi cú pháp vô lý.  
-  > 3. Đóng gói thành sản phẩm Web App hoàn chỉnh chạy siêu nhanh trên máy tính thông thường.  
-  > Nhóm cũng chỉ ra hướng phát triển tiếp theo là làm giàu từ điển tiếng lóng và xử lý câu nói mỉa mai.  
-  > **Nhóm chúng em xin chân thành cảm ơn quý Thầy và xin lắng nghe các câu hỏi nhận xét từ Hội đồng ạ!**"
+Ba phần này phục vụ việc tìm cụm. Đầu Intent làm thêm việc kiểm tra cả câu có chứa xúc phạm hay không.
+
+Cuối cùng, cổng dùng kết quả kiểm tra câu để quyết định giữ hay bỏ các nhãn nghi vấn. Em sẽ giải thích cổng này ở trang tiếp theo.”
+
+**Không cần đọc:** kích thước vector, công thức hoặc tên thuật toán Viterbi. Nếu được hỏi: vector PhoBERT có 768 chiều; Linear tạo điểm nhãn trước CRF.
+
+## Mục 7 (slide 7) — Dual head hoạt động thế nào? | 75 giây
+
+“Dual head có thể hiểu là hai đầu làm hai việc, cùng dùng chung PhoBERT.
+
+Đầu thứ nhất tìm những từ hoặc cụm có thể xúc phạm. Đầu thứ hai đánh giá cả câu có chứa nội dung xúc phạm hay không.
+
+Sau đó có một cổng lọc. Nếu điểm của đầu thứ hai thấp hơn 0,5, các nhãn xúc phạm được đổi về O. Nếu điểm từ 0,5 trở lên, hệ thống giữ kết quả của đầu tìm cụm.
+
+Mục tiêu là tránh chỉ vì gặp một từ nhạy cảm mà đánh dấu nhầm. Tuy nhiên, nếu đầu kiểm tra câu đoán sai, cổng cũng có thể xóa mất cụm xúc phạm thật. Vì vậy, cần xem cả lợi ích và nguy cơ bỏ sót.”
+
+**Nếu Thầy hỏi thêm:** Nhãn của đầu kiểm tra câu mặc định được suy từ việc câu có nhãn B hoặc I. Nó không trực tiếp đo ý định trong đầu người viết. Công thức huấn luyện là `L = L_CRF + 0,5 × L_BCE`.
+
+## Mục 8 (slide 8) — Ví dụ hai vế câu | 60 giây
+
+“Xét hai vế ‘Con chó này đẹp’ và ‘Mày đúng là con chó’. Cùng có từ ‘chó’, nhưng một vế nói về thú cưng, vế kia công kích người khác.
+
+Để minh họa cổng, giả sử hệ thống xử lý riêng từng vế. Vế đầu có điểm 0,05, thấp hơn 0,5, nên cổng bỏ nhãn nghi vấn và giữ nguyên câu khen.
+
+Vế sau có điểm 0,98, vượt ngưỡng, nên cổng giữ cụm đã tìm được để có thể che bằng dấu sao.
+
+Hai điểm này dùng để giải thích cách hoạt động, chưa phải xác suất đầu Intent đo được cho từng vế. Bộ lọc trên web hiện còn dùng luật từ khóa. Điều nhóm hướng đến là giữ câu bình thường và tìm đúng cụm công kích.”
+
+**Nhớ:** Muốn mô hình đánh giá riêng từng vế phải tách và chạy từng vế. Cổng không tự tìm thêm cụm mà đầu tìm cụm đã bỏ sót. Không khẳng định từ khóa nào cũng khiến mô hình cũ sai hoặc dual head sẽ loại bỏ hoàn toàn đánh dấu nhầm.
+
+## Mục 9 (slide 9) — Bảng kết quả ba mô hình | 75 giây
+
+“Precision cho biết trong các cụm đã đánh dấu có bao nhiêu cụm đúng. Recall cho biết trong các cụm cần tìm, mô hình tìm được bao nhiêu. F1 kết hợp cả hai.
+
+Theo bảng cập nhật, F1 của Linear là 66,28%, CRF là 68,61% và mô hình có DualHead là 71,35%. Như vậy, mô hình cuối cao hơn Linear 5,07 điểm phần trăm và cao hơn CRF 2,74 điểm.
+
+Các số này theo bảng dùng tạo hình. Nhóm cần đối chiếu log đánh giá trên toàn bộ test để xác nhận kết quả của checkpoint.”
+
+## Mục 10 (slide 11) — Lỗi ranh giới từ ghép | 30 giây
+
+“Hình này chỉ nói về lỗi xác định đầu cuối cụm. Tỷ lệ của Linear là 25,8%, CRF là 18,4%, còn DualHead là 13,8%.
+
+Chênh lệch giữa Linear và DualHead là 12 điểm phần trăm. Đây là phép trừ hai tỷ lệ, không phải mức giảm tương đối 12%. Lỗi vẫn còn, nên cần tiếp tục kiểm tra ranh giới cụm.”
+
+## Mục 11 (slide 12) — Mười một dạng lỗi trên 100 câu phân tích | 35 giây
+
+“Hình số 4 đã đổi thành 11 dạng lỗi, không còn là biểu đồ đơn chuỗi và đa chuỗi.
+
+Em chỉ nhấn mạnh hai nhóm: lỗi đa chuỗi giảm từ 12 xuống 4; đánh dấu nhầm từ động vật giảm từ 8 xuống 1. Tuy vậy, lỗi trích dẫn vẫn là 4 và lỗi nhãn gốc vẫn là 3.
+
+Như vậy, có nhóm cải thiện rõ nhưng không phải mọi lỗi đều giảm hoặc biến mất.”
+
+## Mục 12 (slide 13) — Ma trận BIO trên 100 câu đầu test | 35 giây
+
+“Ma trận mới dùng 100 câu đầu của tập test, gồm 1.186 từ. Hàng là nhãn thật, cột là nhãn dự đoán.
+
+Có 25 từ B và 34 từ I bị đoán thành O, tức 59 từ thuộc cụm bị bỏ sót. Ngược lại, có 28 từ O bị đánh dấu thành B hoặc I.
+
+Đây là kết quả cấp từ trên một phần test. Không dùng nó để thay cho điểm F1 cấp cụm của toàn bộ test.”
+
+## Mục 13 (slide 15) — Ứng dụng web | 40 giây
+
+“Người dùng nhập bình luận, hệ thống trả về các cụm được đánh dấu và nội dung đã che.
+
+Hiện cần phân biệt hai bước: cổng trong mô hình dual head và bộ lọc từng vế bằng luật trên web. Khi đánh giá, nhóm cần biết kết quả cải thiện đến từ bước nào.
+
+Ứng dụng cũng cần hiển thị rõ mô hình đã tải. Nếu chỉ đang dùng cách xử lý dự phòng thì không nên coi đó là kết quả của mô hình đã huấn luyện.”
+
+## Mục 14 (slide 16) — Hạn chế và hướng cải thiện | 45 giây
+
+“Có ba việc nhóm cần làm tiếp.
+
+Thứ nhất, bổ sung ví dụ từ lóng và viết tắt, kiểm tra để nhãn vẫn đúng.
+
+Thứ hai, thử các mức ngưỡng của dual head và so sánh khi bật, tắt cổng. Cần đo cả đánh dấu nhầm và bỏ sót.
+
+Thứ ba, bổ sung câu châm biếm và câu có nhiều vế khác nghĩa. Trước khi kết luận hiệu quả, nhóm cần lưu kết quả test và tách rõ phần đóng góp của mô hình với phần lọc bằng luật.”
+
+## Mục 15 (slide 17) — Kết luận | 30 giây
+
+“Bộ đối chứng mới có ba mô hình. Theo báo cáo, mô hình có DualHead đạt F1 71,35%, cao hơn Linear 5,07 điểm phần trăm. Lỗi ranh giới giảm từ 25,8 xuống 13,8%.
+
+Hình 11 dạng lỗi vẫn cho thấy các trường hợp khó như châm biếm và trích dẫn. Việc tiếp theo là xác nhận kết quả trên toàn bộ test, cải thiện dữ liệu và tách rõ hiệu quả của mô hình với bộ lọc luật.”
+
+
+Kết thúc: “Nhóm em cảm ơn Thầy và các bạn đã lắng nghe.”

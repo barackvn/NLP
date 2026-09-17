@@ -28,3 +28,10 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 *.log
+
+# ChatGPT & Presentation temporary build folders
+.chart-data*/
+.presentation*/
+*.pptx
+outputs/
+scratch_*.py

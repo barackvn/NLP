@@ -63,15 +63,15 @@ MODEL_CONFIGS = {
         "eval_desc": "Bóc tách ranh giới chuỗi tốt hơn, giảm nhiễu, triệt tiêu lỗi cú pháp nhờ Viterbi giải mã toàn cục."
     },
     "bilstm_crf": {
-        "key": "PhoBERT-BiLSTM-CRF",
-        "file": "best_phobert_bilstm_crf.pt",
-        "name": "PhoBERT-BiLSTM-CRF (Đề xuất SOTA)",
+        "key": "PhoBERT-BiLSTM-CRF(DualHead)",
+        "file": "best_phobert_dualhead_bilstm_crf.pt",
+        "name": "PhoBERT-BiLSTM-CRF(DualHead)",
         "num": "3",
-        "f1_val": "0.703",
+        "f1_val": "0.714",
         "color": "green",
         "eval_type": "success",
-        "eval_title": "Hiệu quả tốt nhất",
-        "eval_desc": "Độ chính xác cao, xử lý tốt ngữ cảnh và ranh giới chuỗi, ghi nhớ ngữ cảnh 2 chiều."
+        "eval_title": "Đề xuất SOTA Đa nhiệm",
+        "eval_desc": "Độ chính xác cao nhất, xử lý ngữ cảnh 2 chiều và tích hợp cổng Gated Intent triệt tiêu báo động giả."
     }
 }
 

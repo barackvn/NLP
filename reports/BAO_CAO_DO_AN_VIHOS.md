@@ -1,195 +1,211 @@
-# BÁO CÁO THUYẾT MINH ĐỒ ÁN KỸ THUẬT
-## CẢI TIẾN PHƯƠNG PHÁP NHẬN DIỆN CHUỖI NGÔN NGỮ XÚC PHẠM TIẾNG VIỆT (ViHOS) BẰNG MÔ HÌNH KẾT HỢP PhoBERT-BiLSTM-CRF
+# BÁO CÁO ĐỒ ÁN ViHOS
+## Nhận diện cụm xúc phạm tiếng Việt bằng PhoBERT và mô hình DualHead–BiLSTM–CRF
 
-* **Đơn vị đào tạo:** Trường Đại học Công nghệ Thông tin – Đại học Quốc gia TP.HCM
-* **Bộ môn:** Xử lý Ngôn ngữ Tự nhiên (NLP)
-* **Giảng viên hướng dẫn:** NCS.ThS. Đặng Văn Thìn & Tác giả Trần Quốc Khánh
-* **Nhóm sinh viên thực hiện:**
-  1. Dương Quốc Thương (26410127) - Nhóm trưởng
-  2. Nông Nguyễn Thành (26410115)
-  3. Hoàng Võ Minh Tuấn (26410146)
-  4. Bùi Quốc Thịnh (26410108)
-  5. Trần Tiến Dũng (26410024)
+**Bản cập nhật:** 16/09/2026, đồng bộ bốn hình trong `reports/figures` và bảng `ablation_table.md`.
 
----
+- **Đơn vị:** Trường Đại học Công nghệ Thông tin – ĐHQG TP.HCM.
+- **Giảng viên hướng dẫn theo hồ sơ nhóm:** Đặng Văn Thìn; tác giả tài liệu tham khảo: Trần Quốc Khánh.
+- **Thành viên:** Dương Quốc Thương (26410127), Nông Nguyễn Thành (26410115), Hoàng Võ Minh Tuấn (26410146), Bùi Quốc Thịnh (26410108), Trần Tiến Dũng (26410024).
 
-## CHƯƠNG 1: TỔNG QUAN & ĐẶT VẤN ĐỀ
+## Tóm tắt
 
-### 1.1. Bối cảnh nghiên cứu
-Sự bùng nổ của mạng xã hội (Facebook, YouTube, TikTok) tại Việt Nam tạo môi trường trao đổi thuận lợi nhưng cũng làm gia tăng đáng kể các hành vi phát ngôn xúc phạm, công kích thù ghét (Hate & Offensive Speech).
+Đồ án tìm vị trí các cụm xúc phạm trong bình luận tiếng Việt. Phiên bản báo cáo hiện tại so sánh ba mô hình: **PhoBERT–Linear**, **PhoBERT–CRF** và **PhoBERT–BiLSTM–CRF (DualHead)**. Tên cuối tương ứng lớp `PhoBERT_DualHead_BiLSTM_CRF` trong mã nguồn.
 
-### 1.2. Hạn chế của bài toán Phân loại câu (Sentence-level Classification)
-Hầu hết các nghiên cứu trước đây chỉ tiếp cận dưới góc độ phân loại nhị phân toàn câu: câu có chứa yếu tố xúc phạm (1) hay câu sạch (0). Phương pháp này gặp hạn chế lớn trong môi trường kiểm duyệt thực tế:
-* Buộc hệ thống phải xóa bỏ hoàn toàn câu bình luận, gây gián đoạn luồng thảo luận.
-* Không thể chỉ ra chính xác cụm từ nào mang tính vi phạm để giải thích lý do cho người dùng.
+Theo bảng số liệu dùng tạo hình, ba mô hình có Span-F1 lần lượt **66,28%**, **68,61%** và **71,35%**. DualHead cao hơn Linear **5,07 điểm phần trăm**, cao hơn CRF **2,74 điểm phần trăm**. Bộ hình mới còn trình bày lỗi ranh giới, 11 dạng lỗi định tính và ma trận nhầm lẫn BIO trên 100 câu đầu của tập test.
 
-### 1.3. Bài toán Nhận diện chuỗi ngôn ngữ xúc phạm (Toxic Spans Detection)
-Nhiệm vụ là xác định chính xác vị trí (offsets) hoặc chuỗi các từ ngữ mang tính xúc phạm trong câu văn theo bài toán Sequence Labeling:
-* `O` (Outside): Từ ngữ trung tính.
-* `B-HOS`: Từ bắt đầu chuỗi xúc phạm.
-* `I-HOS`: Từ tiếp theo nằm trong chuỗi xúc phạm.
-
-Để giải quyết triệt để các hạn chế trên, đề tài thực hiện nghiên cứu đối chứng giữa 3 trường phái kiến trúc:
-
-| Tiêu chí | 1. PhoBERT-Linear (Baseline Thầy) | 2. PhoBERT-CRF (Bóc tách Ablation) | 3. PhoBERT-BiLSTM-CRF (Đề xuất SOTA) |
-| :--- | :--- | :--- | :--- |
-| **Bản chất kiến trúc** | PhoBERT + Linear Head + Softmax độc lập | PhoBERT + Tầng CRF Viterbi toàn cục | PhoBERT + BiLSTM 2 chiều + Tầng CRF Viterbi |
-| **Hình tượng ẩn dụ** | **Người gác cổng quyết định vội vàng:** Nhìn từng từ một cách độc lập để gắn nhãn, không quan tâm từ trước/sau là gì. | **Trọng tài tuân thủ luật lệ nghiêm ngặt:** Bắt buộc nhãn sau phải hợp lệ với nhãn trước (triệt tiêu lỗi cú pháp). | **Thám tử điều tra toàn diện:** Vừa hiểu luật chuyển nhãn (CRF), vừa có sổ tay ghi nhớ ngữ cảnh 2 chiều (BiLSTM). |
-| **Lỗi cú pháp $O \to I\text{-HOS}$** | **Rất cao (26.4%)**: Nhãn $I$ xuất hiện vô cớ mà không có $B$ mở đầu. | **0.0% (Triệt tiêu 100%)** nhờ ma trận phạt chuyển trạng thái $A_{i,j}$. | **0.0% (Triệt tiêu 100%)** nhờ ma trận phạt chuyển trạng thái $A_{i,j}$. |
-| **Xử lý câu đa cụm xúc phạm cách xa** | Kém: Thường chỉ bắt cụm đầu và bỏ sót các cụm phân tán phía sau. | Khá: Giảm sót cụm nhưng có thể gom nhầm từ sạch ở giữa vào span. | **Xuất sắc (+5.8% Recall):** Định vị chuẩn xác từng cụm phân tán độc lập. |
-| **Lỗi ranh giới từ ghép tiếng Việt** | Cao (**25.8%**): Dễ cắt cụt từ ghép (*mất...* bỏ *dạy*). | Trung bình (**18.4%**). | **Thấp nhất (14.6% - Giảm 11.2%)**: Bóc tách nguyên vẹn ranh giới từ ghép. |
-| **Span-F1 Benchmark** | **66.28%** | **68.61% (+2.33%)** | **70.31% (+4.03%)** |
-
-### 1.4. Điểm mới và Đóng góp Học thuật của Đề tài so với Bài báo gốc ViHOS (EACL 2023)
-Trong công trình gốc công bố tại EACL 2023 (*Tran et al., 2023*), nhóm tác giả chủ yếu tập trung xây dựng bộ dữ liệu benchmark và chỉ thực nghiệm 3 baseline cơ bản:
-1. `BiLSTM-CRF`: Sử dụng static Word2Vec cũ, không bắt được ngữ cảnh từ vựng biến thể tiếng Việt hiện đại.
-2. `PhoBERT-Linear` (Baseline của Thầy): Dùng Softmax phân loại độc lập từng token $\to$ **tồn tại 2 điểm hạn chế lớn:**
-   * Sinh chuỗi nhãn phi logic $O \to I\text{-HOS}$ (chiếm 26.4% tổng số lỗi).
-   * Lỗi sai lệch ranh giới từ ghép tiếng Việt (chiếm 25.8% tổng số lỗi).
-3. `XLMR-Linear`: Tương tự baseline PhoBERT-Linear.
-
-👉 **Bài báo gốc HOÀN TOÀN CHƯA CÓ kiến trúc kết hợp PhoBERT-BiLSTM-CRF.**
-
-**Bốn (04) đóng góp đột phá của đề tài:**
-1. **Kiến trúc đề xuất mới (PhoBERT-BiLSTM-CRF):** Lần đầu tiên kết hợp 3 tầng xếp chồng (Contextual Representation + Smoothing Bridge + Global Label Constraints), nâng Span-F1 từ **66.28% lên 70.31% (+4.03%)**, đánh bại toàn bộ các baseline trong bài báo gốc.
-2. **Kỹ thuật First-token Subword Alignment & Differential Learning Rate:** Triệt tiêu hoàn toàn 100% lỗi chuyển nhãn sai ngữ pháp $O \to I\text{-HOS}$ và giảm lỗi sai ranh giới từ từ 25.8% xuống 14.6%.
-3. **Nghiên cứu bóc tách toàn diện (Ablation Study) & Phân loại 11 dạng lỗi định tính:** Minh chứng vai trò vượt trội của tầng BiLSTM trên câu đa chuỗi xúc phạm phân tán (Multiple Spans).
-4. **Sản phẩm ứng dụng Web App CPU hoàn chỉnh:** Tích hợp tính năng tự động kiểm duyệt **Auto-Masking (`***`)** với độ trễ xử lý thực tế 50–80ms/câu trên máy tính cá nhân tiêu chuẩn.
-
-## CHƯƠNG 2: BỘ DỮ LIỆU CHUẨN ViHOS BENCHMARK (EACL 2023)
-
-* **Quy mô:** 11.056 bình luận được gán nhãn thủ công bởi con người, công bố tại hội nghị EACL 2023 (Trần Quốc Khánh et al.).
-* **Cấu trúc phân chia:**
-  * Tập huấn luyện (Train): 8.844 câu.
-  * Tập kiểm định (Dev): 1.106 câu.
-  * Tập kiểm thử (Test): 1.106 câu.
-* **Tính cân bằng:** Gồm 5.528 câu thù ghét/xúc phạm và 5.528 câu sạch trung tính nhằm kiểm soát tỷ lệ báo động giả (False Positive).
+**Phạm vi bằng chứng:** Bảng so sánh và thống kê 11 dạng lỗi là các giá trị khai báo trong `run_ablation_reports.py`. Phần tạo ma trận của tệp này chạy checkpoint DualHead trên `Subset(test_ds, range(100))`. Lần cập nhật tài liệu này đọc hình và đối chiếu dữ liệu, không chạy lại huấn luyện hoặc suy luận. Không dùng ma trận 100 câu để xác nhận Span-F1 toàn tập test.
 
 ---
 
-## CHƯƠNG 3: THIẾT KẾ KIẾN TRÚC MÔ HÌNH ĐỀ XUẤT
+## 1. Bài toán và lý do thực hiện
 
-Kiến trúc **PhoBERT-BiLSTM-CRF** được thiết kế dưới dạng **3 tầng xếp chồng (Stacked Architecture)**:
+Khi có nhiều bình luận, kiểm tra thủ công từng câu mất thời gian. Từ lóng, viết tắt và ngữ cảnh khiến việc xác định nội dung xúc phạm khó hơn việc tìm một danh sách từ khóa.
 
-```
-[Câu bình luận tiếng Việt]
-       │
-       ▼
-┌──────────────────────────────┐
-│   TẦNG 1: PhoBERT Backbone   │ ──► Trích xuất vector ẩn ngữ cảnh (768 chiều)
-└──────────────────────────────┘
-       │ H ∈ R^(B × T × 768)
-       ▼
-┌──────────────────────────────┐
-│   TẦNG 2: BiLSTM Layer       │ ──► Smoothing Bridge & Kết nối tuần tự chuỗi xa (512 chiều)
-└──────────────────────────────┘
-       │ H_lstm ∈ R^(B × T × 512)
-       ▼
-┌──────────────────────────────┐
-│   TẦNG 3: CRF Layer          │ ──► Tối ưu hóa chuỗi nhãn toàn cục & Giải mã Viterbi
-└──────────────────────────────┘
-       │
-       ▼
-[Chuỗi nhãn BIO tối ưu: O, B-HOS, I-HOS]
-```
+Phân loại cấp câu trả lời bình luận có xúc phạm hay không. Đồ án tập trung vào mức chi tiết hơn: **tìm đúng từ hoặc cụm xúc phạm**, hạn chế bỏ sót và đánh dấu nhầm. Đầu ra giúp người kiểm duyệt biết phần nào cần xem lại hoặc có thể che bằng `***`. Việc xóa cả câu là lựa chọn của ứng dụng, không phải điều bắt buộc của phương pháp phân loại câu.
 
-### 3.1. Tầng PhoBERT Backbone (`vinai/phobert-base-v2`)
-* Đã được huấn luyện sẵn trên 20GB văn bản tiếng Việt chất lượng cao.
-* Cung cấp biểu diễn ngữ cảnh mạnh mẽ cho từng subword.
+- **Đầu vào:** một bình luận tiếng Việt.
+- **Đầu ra mô hình:** nhãn BIO theo từ.
+- **Đầu ra ứng dụng:** cụm được phát hiện và văn bản đã đánh dấu hoặc che.
 
-### 3.2. Tầng BiLSTM Layer
-* `input_size = 768`, `hidden_size = 256`, `bidirectional = True` $\to$ Đầu ra 512 chiều.
-* Đóng vai trò là "cầu nối mượt hóa" (smoothing bridge), kết nối ngữ cảnh hai chiều giúp khắc phục hiện tượng mất thông tin ở các câu có nhiều cụm từ xúc phạm phân tán cách xa nhau (Multiple Spans).
+### 1.1. Nhãn BIO
 
-### 3.3. Tầng CRF Layer & Viterbi Decoding
-* Duy trì ma trận chuyển đổi trạng thái nhãn $A_{i,j}$.
-* Huấn luyện thông qua hàm Negative Log-Likelihood Loss toàn cục.
-* Giải mã Viterbi triệt tiêu hoàn toàn các bước chuyển nhãn sai cú pháp (như $O \to I\text{-HOS}$).
+| Nhãn | Ý nghĩa |
+|---|---|
+| B-HOS | Từ đầu của một cụm xúc phạm |
+| I-HOS | Từ tiếp theo trong cùng cụm |
+| O | Từ ngoài cụm |
 
-### 3.4. Kỹ thuật First-token Subword Alignment
-* Subword đầu tiên của từ: Gán nhãn BIO thật.
-* Các subword mang hậu tố `@@` phía sau: Gán nhãn `-100` (`IGNORE_INDEX`).
-* Tầng CRF tự động che mask các vị trí `-100`, đảm bảo việc tính toán và đánh giá luôn chuẩn xác theo ranh giới từ vựng gốc.
+Ví dụ minh họa: `Bạn / nói / thật / ngu` có thể biểu diễn bằng `O / O / O / B-HOS`. Một câu có thể có nhiều cụm riêng biệt; mỗi cụm bắt đầu bằng B-HOS. Đây là ví dụ giải thích định dạng nhãn, không phải phép đo mô hình.
 
----
+## 2. Dữ liệu
 
-## CHƯƠNG 4: THỰC NGHIỆM & KẾT QUẢ
+| Tập | Số câu | Số từ trong JSON | Vai trò |
+|---|---:|---:|---|
+| Train | 8.844 | 108.430 | Học trọng số |
+| Dev | 1.106 | 13.948 | Chọn cấu hình và checkpoint |
+| Test | 1.106 | 13.424 | Đánh giá cuối cùng |
 
-### 4.1. Thiết lập thực nghiệm
-* **Môi trường:** Google Colab GPU Tesla T4 (16GB VRAM).
-* **Differential Learning Rate:**
-  * PhoBERT backbone: $lr = 2\times 10^{-5}$
-  * BiLSTM + Linear + CRF: $lr = 1\times 10^{-3}$
-* **Optimizer:** AdamW, Warmup 10% steps, Weight Decay = 0.01.
-* **Thước đo đánh giá:** Span-Precision, Span-Recall, Span-F1 (thư viện `seqeval`).
+Tổng cộng có 11.056 câu. Nhãn O chiếm khoảng 82,37% số từ trong ba tệp JSON. Vì vậy, độ đúng cấp từ có thể cao ngay cả khi mô hình bỏ sót cụm; cần thêm thước đo ở cấp cụm.
 
-### 4.2. Kết quả Nghiên cứu Bóc tách (Ablation Study)
+Mã hiện tại lưu vị trí subword đầu tiên của mỗi từ bằng `word_indices`, gom biểu diễn tại các vị trí này và dùng `word_mask` cho chuỗi từ. Giới hạn mặc định là 128 token đầu vào, gồm token đặc biệt. Câu dài có thể bị cắt; không đồng nhất số từ với số subword.
 
-| Cấu trúc Mô hình | Precision | Recall | **Span-F1** | Lỗi $O \to I\text{-HOS}$ | Lỗi ranh giới từ |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **PhoBERT-Linear** *(Baseline gốc)* | 67.12% | 65.46% | **66.28%** | 26.4% | 25.8% |
-| **PhoBERT-CRF** | 69.40% | 67.85% | **68.61%** *(+2.33%)* | **0.0%** | 18.4% |
-| **PhoBERT-BiLSTM-CRF** *(Đề xuất)* | **71.15%** | **69.50%** | **70.31%** *(+4.03%)* | **0.0%** | **14.6%** |
+Riêng **100 câu đầu của test.json có 1.186 từ**, gồm 936 O, 124 B-HOS và 126 I-HOS. Các tổng này khớp tổng hàng của ma trận mới.
 
-### 4.3. Phân tích định tính 11 dạng lỗi trên 100 mẫu
-* Giảm lỗi đa chuỗi cách xa từ 12 câu xuống 4 câu (-66.7%).
-* Giảm lỗi sai ranh giới từ ghép từ 14 câu xuống 6 câu (-57.1%).
-* Giảm lỗi nhận diện teencode/viết tắt từ 18 câu xuống 11 câu (-38.9%).
+## 3. Phương pháp
 
-### 4.4. Ca nghiên cứu điển hình (Case Study): Hiện tượng Lệch phân phối & Over-smoothing trên Từ lóng Biến âm
-Trong quá trình thử nghiệm thực tế trên hệ thống, nhóm phát hiện một ca phân tích lỗi (Error Analysis) rất giá trị mang tính bản chất giữa các cơ chế giải mã:
-* **Câu thử nghiệm:** *"Món ăn của quán này bình thường nhưng giá cả hơi đắt như con kẹt"*
-* **Kết quả đối chứng thực tế:**
-  * `PhoBERT-Linear (Baseline)`: **Phát hiện 1 chuỗi vi phạm** (`con kẹt` - $102.6\text{ ms}$).
-  * `PhoBERT-CRF (Ablation)`: **Phát hiện 1 chuỗi vi phạm** (`con kẹt` - $104.6\text{ ms}$).
-  * `PhoBERT-BiLSTM-CRF (Đề xuất SOTA)`: **Bỏ sót (0 chuỗi)** $\to$ *Dự đoán nhầm toàn bộ câu là sạch*.
-* **Phân tích nguyên nhân khoa học:**
-  1. *Đặc trưng ngôn ngữ học (Linguistic factor):* "Con kẹt" là tiếng lóng giảm thanh/biến âm (Euphemistic Slang) của từ thô tục "con cặc". Trong tiếng Việt quy chuẩn, từ "kẹt" là từ vựng trung tính 100% mang nghĩa sạch (*kẹt xe, kẹt tiền, mắc kẹt*).
-  2. *Lệch phân phối dữ liệu (Data Distribution Bias):* Trong tập huấn luyện ViHOS benchmark, các từ chửi tục trực diện xuất hiện dày đặc, trong khi biến thể địa phương "con kẹt" gần như vắng mặt. Toàn bộ các ngữ cảnh chứa từ "kẹt" trong tập train đều được gán nhãn `O` (nhãn sạch).
-  3. *Hiện tượng Over-smoothing của mạng tuần tự BiLSTM:* 
-     * Mô hình Baseline (Linear) ra quyết định bằng Softmax độc lập trên từng token, chỉ cần vector embedding của "con" và "kẹt" có tương quan tiêu cực là kích hoạt nhãn vi phạm (High Recall cục bộ trên từ đơn lẻ).
-     * Ngược lại, tầng BiLSTM trong mô hình đề xuất học sự phụ thuộc ngữ cảnh toàn chuỗi hai chiều. Do vế trước là câu đánh giá đồ ăn mang sắc thái hoàn toàn trung tính (*"Món ăn của quán này bình thường nhưng giá cả hơi đắt..."*), dòng thông tin ngữ cảnh sạch áp đảo toàn bộ câu. Trạng thái ẩn của BiLSTM bị làm mượt (over-smoothing), dẫn đến việc triệt tiêu tín hiệu vi phạm của từ lóng hiếm gặp ở cuối câu, khiến giải mã Viterbi chọn đường đi toàn bộ nhãn `O` (False Negative).
+### 3.1. Ba mô hình trong bộ so sánh hiện tại
 
----
+| Mô hình | Cách dự đoán |
+|---|---|
+| PhoBERT–Linear | PhoBERT tạo biểu diễn có ngữ cảnh; Linear chọn nhãn ở từng vị trí |
+| PhoBERT–CRF | Thêm điểm chuyển nhãn và giải mã cả chuỗi bằng Viterbi |
+| PhoBERT–BiLSTM–CRF (DualHead) | Nhánh tìm cụm dùng BiLSTM–Linear–CRF; nhánh cấp câu hỗ trợ lọc nhãn |
 
-## CHƯƠNG 5: SẢN PHẨM ỨNG DỤNG CLIENT-SERVER (FASTAPI + REACT VITE)
+PhoBERT đã cung cấp ngữ cảnh trong cả ba mô hình. Không mô tả Linear là mô hình hoàn toàn không biết từ trước hoặc sau. Bộ so sánh mới không có một dòng riêng cho BiLSTM–CRF đơn đầu, nên không dùng nó để tách riêng đóng góp của BiLSTM và Intent Head. Muốn làm điều đó cần thêm đối chứng.
 
-* Nhóm đã đóng gói toàn bộ mô hình thành ứng dụng tương tác hoàn chỉnh theo kiến trúc chuẩn công nghiệp:
-  * **Backend (FastAPI - Port 8000):** Tải và duy trì 3 checkpoint PyTorch vào RAM, cung cấp REST API `/api/predict` với độ trễ xử lý cực nhanh (**~100 ms/câu** trên CPU tiêu chuẩn).
-  * **Frontend (React 19 + Vite - Port 5173):** Giao diện Modern SaaS Dashboard với bảng điều khiển kiểm soát trạng thái kết nối thời gian thực của 3 mô hình, kịch bản chạy 1 lệnh duy nhất (`npm run dev`) trên terminal và dừng tức thì bằng `Ctrl + C` trong 0.1s.
-* Tích hợp tính năng **Auto-Masking (`***`)**: Tự động che giấu các cụm từ xúc phạm mà không làm xáo trộn ngữ pháp câu.
+### 3.2. Chức năng từng tầng
 
----
+| Phần | Thành phần | Chức năng dễ hiểu | Mục tiêu |
+|---|---|---|---|
+| Tầng 1 | PhoBERT | Đọc từ trong ngữ cảnh, tạo vector 768 chiều | Phân biệt nghĩa theo câu |
+| Tầng 2, đầu 1 | BiLSTM | Xử lý chuỗi theo hai hướng | Kết nối thông tin trước và sau |
+| Tầng 3, đầu 1 | Linear và CRF | Linear tạo điểm nhãn; CRF chọn chuỗi có điểm cao | Hỗ trợ dự đoán ranh giới và quan hệ nhãn |
+| Đầu 2 | Intent Head | Dùng vector vị trí đầu qua MLP để kiểm tra câu có cụm xúc phạm | Bổ sung quyết định cấp câu |
+| Cổng kết hợp | Gated Intent Fusion | P < 0,5: đổi nhãn về O; P ≥ 0,5: giữ nhãn | Lọc cụm nghi bị đánh dấu nhầm |
 
-## CHƯƠNG 6: KẾT LUẬN, ĐIỂM HẠN CHẾ & HƯỚNG PHÁT TRIỂN
+CRF học điểm chuyển nhãn; mã hiện tại chưa đặt ràng buộc BIO cứng. Vì vậy, kết quả 0% lỗi chuyển nhãn trong bảng không có nghĩa mọi đầu vào mới đều hợp lệ. Cổng cũng có thể bỏ sót cụm thật nếu đầu cấp câu dự đoán sai.
 
-### 6.1. Kết luận đạt được
-Đồ án đã giải quyết thành công bài toán Toxic Spans Detection trên tiếng Việt với mô hình PhoBERT-BiLSTM-CRF đạt F1 vượt trội **70.31% (+4.03% so với baseline)**, triệt tiêu 100% lỗi chuyển nhãn cú pháp ($O \to I\text{-HOS}$) và hiện thực hóa thành sản phẩm Web App hoàn chỉnh.
+### 3.3. Huấn luyện dual head
 
-### 6.2. Căn cứ Điểm hạn chế để Định hướng Phát triển Tương lai
-Từ kết quả thực nghiệm và Case Study phân tích lỗi ở Chương 4, nhóm xác định rõ **3 điểm hạn chế cốt lõi** và đề xuất giải pháp phát triển tiếp theo:
+Hai đầu dùng chung PhoBERT. Nhãn của đầu cấp câu mặc định được suy từ chuỗi BIO: có ít nhất một B hoặc I thì nhãn câu là 1. Đây là nhãn **có cụm xúc phạm**, chưa phải phép đo trực tiếp ý định tâm lý của người viết.
 
-1. **Hạn chế 1: Nhạy cảm với tiếng lóng biến âm (Euphemism / Slang) hiếm gặp**
-   * *Hiện tượng:* Tầng BiLSTM có xu hướng bị làm mượt ngữ cảnh (over-smoothing) theo các từ ngữ trung tính xung quanh, bỏ sót các từ lóng nói giảm nói tránh (False Negative).
-   * *Hướng giải quyết:* Tích hợp **Từ điển Tiếng Lóng & Biến âm Tiếng Việt (Slang Lexicon Embeddings)** vào tầng đặc trưng đầu vào để tăng trọng số phát hiện độc lập cho các từ lóng địa phương.
+`L_total = L_CRF + 0,5 × L_BCE`
 
-2. **Hạn chế 2: Độ phủ dữ liệu đối với các biến thể teencode đa dạng trên mạng xã hội**
-   * *Hiện tượng:* Bộ dữ liệu ViHOS chưa bao phủ hết các biến thể viết tắt linh hoạt của giới trẻ (*dcm, vkl, clmm, con kẹt*).
-   * *Hướng giải quyết:* Áp dụng kỹ thuật **Tăng cường Dữ liệu Tự động (Data Augmentation via Rule-based Slang Substitution)** để tự động sinh các biến thể từ lóng vào các ngữ cảnh câu trung tính trong quá trình huấn luyện.
+Hệ số 0,5 trong hàm học và ngưỡng 0,5 khi dự đoán có hai vai trò khác nhau. Mã huấn luyện dùng AdamW; mặc định learning rate PhoBERT 2×10⁻⁵, phần đầu 10⁻³, batch 16, tối đa 5 epoch, seed 42, dropout 0,3, warmup 10%, weight decay 0,01. Checkpoint được chọn theo Span-F1 dev. Đây là cấu hình mặc định trong mã, không thay thế cấu hình của một lần chạy đã lưu.
 
-3. **Hạn chế 3: Ngữ nghĩa châm biếm sâu cay (Sarcasm) không chứa từ khóa thô tục**
-   * *Hiện tượng:* Các câu xúc phạm tinh vi, châm biếm khen đểu (*"Bạn thông minh như thế này thì xã hội tiến hóa ngược"*) không chứa từ ngữ thô tục hiển ngôn nên mô hình gán nhãn `O`.
-   * *Hướng giải quyết:* Nghiên cứu kết hợp cơ chế **Contextual Modulation / Contrastive Learning** nhằm phân biệt sắc thái mỉa mai và bổ sung phân loại ngữ cảm phụ (Sentiment-aware Span Detection).
+### 3.4. Ví dụ ngữ cảnh và phạm vi triển khai
 
-4. **Hạn chế 4: Thiên kiến từ vựng (Lexical Bias) gây báo động giả ở câu ngữ cảnh khen ngợi động vật / trung tính**
-   * *Hiện tượng:* Trong câu bẫy ngữ cảnh đối lập *"Con chó này đẹp, Mày đúng là con chó"*, mô hình truyền thống bị bắt nhầm ở vế 1 do từ "chó" trong tập ViHOS có tần suất xuất hiện trong câu chửi bới lên tới >95%, lấn át từ khen "đẹp".
-   * *Đột phá giải quyết:* Nhóm đề xuất và hiện thực hóa kiến trúc **PhoBERT-DualHead-BiLSTM-CRF Multi-Task Learning**: kết hợp đồng thời **Token Span Head (CRF)** và **Clause/Sentence Intent Head** qua cổng điều biến **Gated Intent Fusion**. Khi vế 1 được Intent Head xác định là phi độc hại ($P < 0.5$), cổng Gating lập tức dập tắt nhãn về `O`, bảo tồn trọn vẹn phát ngôn lành tính và chỉ kích hoạt che vi phạm ở vế 2!
+Với câu “Con chó này đẹp, Mày đúng là con chó”, mục tiêu là giữ phần nói về thú cưng và phát hiện phần công kích người khác.
 
----
+Để giải thích cổng khi xử lý riêng từng vế, có thể **giả sử** vế đầu có P = 0,05 và vế sau P = 0,98. Cổng sẽ bỏ nhãn ở vế đầu và giữ nhãn tìm được ở vế sau. Đây là minh họa; không khẳng định Intent Head đã đo hai xác suất đó.
 
-## CHƯƠNG 7: TÀI LIỆU THAM KHẢO (REFERENCES)
+Trong backend hiện tại, `apply_clause_gated_fusion` dùng luật từ khóa ở từng vế và gán các điểm cố định như 0,05 hoặc 0,98. Cổng của mạng DualHead áp dụng cho mỗi đầu vào. Muốn mạng đánh giá riêng từng vế phải tách vế, chạy mạng và ghép lại đúng vị trí. Khi đo hiệu quả cần tách tác dụng của mạng với tác dụng của luật.
 
-1. **Tran, K. Q., Nguyen, P. G. H., Luu, L. T., & Nguyen, K. V. (2023).** *ViHOS: Vietnamese Hate and Offensive Spans Detection.* In Proceedings of the 17th Conference of the European Chapter of the Association for Computational Linguistics (EACL 2023), pages 792–807, Dubrovnik, Croatia. Association for Computational Linguistics. DOI: `10.18653/v1/2023.eacl-main.58`.
-2. **Nguyen, D. Q., & Nguyen, A. T. (2020).** *PhoBERT: Pre-trained language models for Vietnamese.* In Findings of the Association for Computational Linguistics: EMNLP 2020, pages 1037–1042.
-3. **Lample, G., Ballesteros, M., Subramanian, S., Kawakami, K., & Dyer, C. (2016).** *Neural Architectures for Named Entity Recognition.* In Proceedings of NAACL-HLT 2016, pages 260–270.
-4. **Lafferty, J., McCallum, A., & Pereira, F. C. (2001).** *Conditional Random Fields: Probabilistic Models for Segmenting and Labeling Sequence Data.* In Proceedings of ICML 2001, pages 282–289.
+## 4. Kết quả và diễn giải bốn hình mới
+
+### 4.1. Thước đo
+
+- **Precision:** tỷ lệ cụm đúng trong các cụm đã dự đoán.
+- **Recall:** tỷ lệ cụm thật mà mô hình tìm đúng.
+- **Span-F1:** `2PR/(P+R)`. Cụm phải khớp ranh giới và loại nhãn theo tiêu chí đánh giá.
+- **Ma trận BIO:** số đếm ở cấp từ, không phải số cụm và không trực tiếp cho Span-F1.
+
+F1 không phải tỷ lệ câu hoàn toàn đúng. Các điểm phần trăm là hiệu giữa hai tỷ lệ phần trăm; mức giảm tương đối phải chia thêm cho giá trị ban đầu.
+
+### 4.2. Bảng đối chứng cập nhật
+
+| Mô hình | Precision (%) | Recall (%) | Span-F1 (%) | Lỗi chuyển nhãn (%) | Lỗi ranh giới (%) |
+|---|---:|---:|---:|---:|---:|
+| PhoBERT–Linear | 67,12 | 65,46 | 66,28 | 26,4 | 25,8 |
+| PhoBERT–CRF | 69,40 | 67,85 | 68,61 | 0,0 | 18,4 |
+| PhoBERT–BiLSTM–CRF (DualHead) | 74,82 | 68,20 | 71,35 | 0,0 | 13,8 |
+
+Nguồn: `ablation_table.md` và `benchmark_data` trong `run_ablation_reports.py`. Các giá trị hiện được khai báo trong mã tạo báo cáo; cần log và dự đoán test để xác nhận kết quả checkpoint trên toàn bộ test. Mẫu số của hai tỷ lệ lỗi cần được ghi rõ trong hồ sơ đánh giá, không tự coi là số câu test.
+
+DualHead cao hơn Linear 5,07 điểm F1 và cao hơn CRF 2,74 điểm. So với CRF, Precision tăng 5,42 điểm và Recall tăng 0,35 điểm. Không còn dùng nhận xét “Recall giảm so với BiLSTM–CRF” trong bộ đối chứng ba mô hình này vì không có dòng đơn đầu tương ứng.
+
+### 4.3. Hình 1 — Span-F1 của ba mô hình hiện tại
+
+![Span-F1](figures/01_ablation_span_f1.png)
+
+Ba cột lần lượt là 66,28%; 68,61%; 71,35%. Cột cuối đã là **DualHead**, không phải BiLSTM–CRF đơn đầu. Trục tung bắt đầu tại 60%; đọc mức chênh lệch bằng số, không suy ra mức tăng từ tỷ lệ chiều cao cột.
+
+### 4.4. Hình 2 — Lỗi ranh giới từ ghép
+
+![Lỗi ranh giới](figures/02_error_reduction_comparison.png)
+
+Tỷ lệ trên hình là 25,8% ở Linear, 18,4% ở CRF và 13,8% ở DualHead. DualHead thấp hơn Linear **12,0 điểm phần trăm**, tương đương giảm tương đối khoảng **46,5%** nếu cùng mẫu số và cách đo. Nhãn “Giảm 12,0%” trên hình đang biểu diễn phép trừ hai tỷ lệ; trong báo cáo và lời nói phải đọc là **12,0 điểm phần trăm**. Với CRF, chênh lệch tương ứng là 7,4 điểm.
+
+Hình mới chỉ trình bày lỗi ranh giới. Không dùng nó để diễn giải ba nhóm lỗi chuyển nhãn, ranh giới và bỏ sót cụm thứ hai như bản hình trước.
+
+### 4.5. Hình 3 — Ma trận BIO trên 100 câu đầu của test
+
+![Ma trận BIO](figures/03_confusion_matrix_bio.png)
+
+| Nhãn thật / Dự đoán | O | B-HOS | I-HOS | Tổng |
+|---|---:|---:|---:|---:|
+| O | 908 | 14 | 14 | 936 |
+| B-HOS | 25 | 89 | 10 | 124 |
+| I-HOS | 34 | 15 | 77 | 126 |
+| Tổng | 967 | 118 | 101 | 1.186 |
+
+Mã sinh hình dùng checkpoint `best_phobert_dualhead_bilstm_crf.pt` và **100 câu đầu**, không phải mẫu ngẫu nhiên hoặc toàn bộ 1.106 câu test. Tổng hàng khớp dữ liệu JSON của 100 câu này.
+
+- Có 25 + 34 = **59 từ thuộc cụm** bị dự đoán thành O.
+- Có 14 + 14 = **28 từ O** bị dự đoán thành B hoặc I.
+- Có 10 + 15 = **25 từ bị nhầm giữa B và I**.
+- Đường chéo có 1.074 từ đúng trong 1.186 từ, tương đương **90,56% độ đúng cấp từ trên phần dữ liệu này**. Đây không phải Span-F1 hoặc độ đúng toàn câu.
+
+Không suy ra F1 71,35% từ ma trận này, vì đơn vị và phạm vi khác nhau.
+
+### 4.6. Hình 4 — 11 dạng lỗi định tính
+
+![11 dạng lỗi](figures/04_multiple_spans_evaluation.png)
+
+Tên tệp cũ vẫn là `04_multiple_spans_evaluation.png`, nhưng **nội dung mới là 11 dạng lỗi trên 100 câu phân tích**, không phải F1 đơn chuỗi/đa chuỗi.
+
+| Dạng lỗi | Linear | DualHead | Giảm số mẫu lỗi |
+|---|---:|---:|---:|
+| Teencode / viết tắt | 18 | 11 | 7 |
+| Từ lóng / ẩn dụ | 15 | 10 | 5 |
+| Ranh giới từ ghép | 14 | 6 | 8 |
+| Đa chuỗi cách xa | 12 | 4 | 8 |
+| Châm biếm | 10 | 8 | 2 |
+| Đánh dấu nhầm từ động vật lành tính | 8 | 1 | 7 |
+| Tiền xử lý / dấu câu | 7 | 6 | 1 |
+| Thiếu ngữ cảnh văn hóa mạng | 5 | 4 | 1 |
+| Tên riêng / nhãn hiệu | 4 | 3 | 1 |
+| Trích dẫn lời người khác | 4 | 4 | 0 |
+| Nhãn gốc chưa nhất quán | 3 | 3 | 0 |
+
+Nguồn là `error_analysis_data` trong mã tạo hình. Chưa có danh sách mẫu để xác nhận đây là cùng 100 câu của ma trận hoặc các nhóm có loại trừ nhau hay không; không cộng các hàng thành tỷ lệ lỗi toàn bộ test.
+
+Nhóm lỗi đánh dấu nhầm từ động vật giảm 8 còn 1, tức giảm tương đối **87,5% trong nhóm này**, nhưng vẫn còn một mẫu lỗi. Do đó, không kết luận “loại bỏ hoàn toàn báo động giả”. Trích dẫn và nhãn gốc chưa nhất quán chưa giảm trong thống kê này.
+
+### 4.7. Ca từ lóng ở bản đơn đầu trước đây
+
+Báo cáo cũ ghi câu “Món ăn của quán này bình thường nhưng giá cả hơi đắt như con kẹt”: Linear và CRF tìm được cụm, còn BiLSTM–CRF **chưa có DualHead** bỏ sót. Ca này được giữ làm ví dụ về giới hạn của điểm tổng hợp, không phải kết quả thử DualHead mới. Giả thuyết làm mượt quá mức chưa có thí nghiệm xác nhận cơ chế.
+
+## 5. Ứng dụng
+
+Giao diện React gửi bình luận đến FastAPI. Engine nạp checkpoint, trả nhãn và cụm để hiển thị hoặc che bằng `***`. Backend chọn lớp DualHead khi trọng số có phần `intent_head`; cần hiển thị rõ phiên bản mô hình thực tế.
+
+Ứng dụng còn có bộ lọc từng vế bằng luật và chế độ dự phòng khi không tải được checkpoint. Các nhóm như INSULT hoặc THREAT do hậu xử lý bổ sung, không phải các lớp BIO của mô hình hiện tại. Khi báo cáo độ trễ cần đo trên nhiều câu, ghi máy chạy và phân biệt lần tải đầu với suy luận sau khi tải; không lấy một ca làm độ trễ trung bình.
+
+## 6. Hạn chế và hướng cải thiện
+
+1. **Kết quả cần truy vết:** lưu cấu hình, checkpoint, nhãn dự đoán và log trên toàn bộ test. Bảng khai báo và hình minh họa không thay thế bằng chứng chạy.
+2. **Từ lóng và teencode:** bổ sung biến thể từ train, kiểm tra lại nhãn, đánh giá riêng câu thông thường và câu biến thể.
+3. **Cổng DualHead:** thử ngưỡng trên dev, so sánh bật/tắt cổng, đo cả Precision và Recall. Với nhiều vế cần bảo toàn vị trí khi tách và ghép.
+4. **Tách tác dụng mô hình và luật:** so sánh cùng dữ liệu khi bật/tắt lọc luật. Thêm BiLSTM–CRF đơn đầu nếu muốn đo riêng đóng góp Intent Head.
+5. **Châm biếm và trích dẫn:** bổ sung ngữ cảnh, thống nhất tiêu chí gán nhãn. Hình mới vẫn ghi 8 lỗi châm biếm và 4 lỗi trích dẫn.
+6. **Nhãn dữ liệu:** rà soát các trường hợp chưa nhất quán; không kỳ vọng một tầng mô hình tự sửa được nhãn gốc sai.
+
+## 7. Kết luận
+
+Bộ đối chứng mới gồm Linear, CRF và BiLSTM–CRF có DualHead. Theo số liệu báo cáo, DualHead có Span-F1 71,35%, cao hơn Linear 5,07 điểm phần trăm; lỗi ranh giới giảm từ 25,8% còn 13,8%. Thống kê 11 dạng lỗi cho thấy một số nhóm cải thiện, trong khi trích dẫn và nhãn chưa nhất quán chưa giảm.
+
+Ma trận mới mô tả riêng 100 câu đầu test với 1.186 từ. Kết quả này hữu ích để đọc loại lỗi, không thay thế phép đánh giá Span-F1 toàn test. Hệ thống hướng đến hỗ trợ người kiểm duyệt và vẫn cần xác minh kết quả, cải thiện dữ liệu, phân biệt rõ mô hình học với bộ lọc luật.
+
+## Nguồn và các tệp đồng bộ
+
+- `reports/figures/01_ablation_span_f1.png`: F1 ba mô hình hiện tại.
+- `reports/figures/02_error_reduction_comparison.png`: lỗi ranh giới.
+- `reports/figures/03_confusion_matrix_bio.png`: ma trận trên 100 câu đầu test.
+- `reports/figures/04_multiple_spans_evaluation.png`: 11 dạng lỗi, dù tên tệp giữ từ phiên bản cũ.
+- `run_ablation_reports.py`: số liệu khai báo và phạm vi tạo ma trận.
+- `src/model.py`, `src/dataset.py`, `src/train.py`, `src/evaluate.py`: triển khai mô hình và đánh giá.
+- `backend/inference.py`, `backend/main.py`: triển khai ứng dụng và bộ lọc luật.
+- `SLIDES_THUYET_TRINH_18_TRANG.md`: nội dung trình chiếu đồng bộ.
+
+**Tài liệu tham khảo trong hồ sơ dự án:** Tran và cộng sự (2023), *ViHOS: Vietnamese Hate and Offensive Spans Detection*; Nguyen và Nguyen (2020), *PhoBERT*; Lample và cộng sự (2016), *Neural Architectures for Named Entity Recognition*; Lafferty và cộng sự (2001), *Conditional Random Fields*. Không sử dụng danh sách này để suy ra tuyên bố mới hoàn toàn hoặc SOTA khi chưa có đối chứng tương đương.

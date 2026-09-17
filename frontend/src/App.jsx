@@ -63,10 +63,10 @@ const INITIAL_PREDICTION = {
     },
     {
       alias: "bilstm_crf",
-      key: "PhoBERT-BiLSTM-CRF",
-      name: "PhoBERT-BiLSTM-CRF (Đề xuất SOTA)",
+      key: "PhoBERT-BiLSTM-CRF(DualHead)",
+      name: "PhoBERT-BiLSTM-CRF(DualHead)",
       num: "3",
-      f1_val: "0.703",
+      f1_val: "0.714",
       color: "green",
       is_toxic: true,
       spans_count: 3,
@@ -75,8 +75,8 @@ const INITIAL_PREDICTION = {
       categories: ["INSULT", "PROFANITY", "THREAT", "DISCRIMINATION"],
       masked_text: "Mày là đứa *** ***, *** ra khỏi đây ngay!",
       eval_type: "success",
-      eval_title: "Hiệu quả tốt nhất",
-      eval_desc: "Độ chính xác cao, xử lý tốt ngữ cảnh và ranh giới chuỗi.",
+      eval_title: "Đề xuất SOTA Đa nhiệm",
+      eval_desc: "Độ chính xác cao, xử lý tốt ngữ cảnh và tích hợp cổng Gated Intent triệt tiêu báo động giả.",
       words: ["Mày", "là", "đứa", "ngu_si", "phản_quốc", ",", "cút_xéo", "ra", "khỏi", "đây", "ngay", "!"],
       tags: ["O", "O", "O", "B-HOS", "B-HOS", "O", "B-HOS", "O", "O", "O", "O", "O"]
     }

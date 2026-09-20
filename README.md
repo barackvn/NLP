@@ -94,14 +94,14 @@ Kiến trúc **PhoBERT-DualHead-BiLSTM-CRF** được thiết kế để giải 
 ## 📊 Biểu Đồ Báo Cáo Thực Nghiệm (Reports Figures)
 
 ### 1. So sánh F1 & Triệt tiêu Lỗi Chuyển nhãn
-| So sánh Span-F1 giữa 3 mô hình | Tỷ lệ giảm các dạng lỗi chính |
+| So sánh Span-F1 giữa 4 mô hình đối chứng | Triệt tiêu lỗi cú pháp chuyển nhãn O -> I-HOS |
 | :---: | :---: |
-| ![Ablation Span F1](reports/figures/01_ablation_span_f1.png) | ![Error Reduction](reports/figures/02_error_reduction_comparison.png) |
+| ![Ablation Span F1](reports/figures/01_ablation_span_f1.png?raw=true&v=20260920) | ![Error Reduction](reports/figures/02_error_reduction_comparison.png?raw=true&v=20260920) |
 
 ### 2. Ma trận Nhầm lẫn & Đa chuỗi (Multiple Spans)
 | Ma trận nhầm lẫn BIO Tokens | Hiệu quả trên câu Đa chuỗi phân tán |
 | :---: | :---: |
-| ![Confusion Matrix](reports/figures/03_confusion_matrix_bio.png) | ![Multiple Spans Evaluation](reports/figures/04_multiple_spans_evaluation.png) |
+| ![Confusion Matrix](reports/figures/03_confusion_matrix_bio.png?raw=true&v=20260920) | ![Multiple Spans Evaluation](reports/figures/04_multiple_spans_evaluation.png?raw=true&v=20260920) |
 
 ---
 

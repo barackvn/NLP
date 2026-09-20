@@ -1,0 +1,46 @@
+[
+  {
+    "Mô hình": "1. PhoBERT-Linear (Baseline Gốc)",
+    "Loại": "phobert_linear",
+    "Epoch tốt nhất": 5,
+    "Precision (%)": 60.34,
+    "Recall (%)": 58.15,
+    "Span-F1 (%)": 59.23,
+    "Lỗi O -> I-HOS (%)": 0.82,
+    "Lỗi lệch ranh giới (%)": 23.89,
+    "Thời gian eval (s)": 120.5
+  },
+  {
+    "Mô hình": "2. PhoBERT-CRF (Ablation Bóc Tách)",
+    "Loại": "phobert_crf",
+    "Epoch tốt nhất": 4,
+    "Precision (%)": 63.37,
+    "Recall (%)": 59.26,
+    "Span-F1 (%)": 61.24,
+    "Lỗi O -> I-HOS (%)": 0.04,
+    "Lỗi lệch ranh giới (%)": 23.94,
+    "Thời gian eval (s)": 121.2
+  },
+  {
+    "Mô hình": "3. PhoBERT-BiLSTM-CRF (Smoothing Bridge)",
+    "Loại": "phobert_bilstm_crf",
+    "Epoch tốt nhất": 3,
+    "Precision (%)": 65.0,
+    "Recall (%)": 59.65,
+    "Span-F1 (%)": 62.21,
+    "Lỗi O -> I-HOS (%)": 0.06,
+    "Lỗi lệch ranh giới (%)": 22.93,
+    "Thời gian eval (s)": 127.3
+  },
+  {
+    "Mô hình": "4. PhoBERT-DualHead-BiLSTM-CRF (Đề Xuất Đa Nhiệm)",
+    "Loại": "phobert_dualhead_bilstm_crf",
+    "Epoch tốt nhất": 5,
+    "Precision (%)": 62.99,
+    "Recall (%)": 58.31,
+    "Span-F1 (%)": 60.56,
+    "Lỗi O -> I-HOS (%)": 0.13,
+    "Lỗi lệch ranh giới (%)": 24.1,
+    "Thời gian eval (s)": 132.6
+  }
+]

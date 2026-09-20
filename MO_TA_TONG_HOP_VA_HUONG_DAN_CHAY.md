@@ -44,7 +44,7 @@ Doan/
 │
 ├── checkpoints/                        # Nơi chứa file trọng số (.pt)
 │   ├── best_phobert_bilstm_crf.pt      # File trọng số SOTA (~1.64GB) nạp từ Colab về để kích hoạt AI thật
-│   ├── baseline_phobert_linear.pt      # File trọng số baseline của Thầy (~1.61GB)
+│   ├── baseline_phobert_linear.pt      # File trọng số baseline PhoBERT-Linear (~1.61GB)
 │   └── baseline_phobert_crf.pt         # File trọng số bóc tách vai trò BiLSTM (~1.61GB)
 │
 ├── src/                                # Mã nguồn Python lõi
@@ -146,9 +146,10 @@ Doan/
 
 | Kiến trúc Mô hình | Precision | Recall | **Span-F1** | Lỗi $O \to I\text{-HOS}$ | Lỗi ranh giới từ | Ưu điểm cốt lõi |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **PhoBERT-Linear** *(Baseline của Thầy)* | 67.12% | 65.46% | **66.28%** | 26.4% | 25.8% | Quyết định cục bộ, sinh nhãn phi logic |
-| **PhoBERT-CRF** *(Bóc tách BiLSTM)* | 69.40% | 67.85% | **68.61%** *(+2.33%)* | **0.0%** | 18.4% | Ràng buộc toàn cục, triệt tiêu lỗi cú pháp |
-| **PhoBERT-BiLSTM-CRF** *(Đề xuất SOTA)* | **71.15%** | **69.50%** | **70.31%** *(+4.03%)* | **0.0%** | **14.6%** | **Cầu nối mượt hóa, bắt trọn vẹn câu đa chuỗi phân tán xa** |
+| **PhoBERT-Linear** *(Baseline)* | 60.34% | 58.15% | **59.23%** | 0.82% (110 lần) | 23.89% | Quyết định cục bộ, sinh nhãn phi logic |
+| **PhoBERT-CRF** *(Bóc tách BiLSTM)* | 63.37% | 59.26% | **61.24%** *(+2.01%)* | **0.04% (5 lần)** | 23.94% | Ràng buộc toàn cục, giảm hơn 95% lỗi cú pháp |
+| **PhoBERT-BiLSTM-CRF** *(Đề xuất SOTA)* | **65.00%** | **59.65%** | **62.21%** *(+2.98%)* | **0.06% (8 lần)** | **22.93%** | **Cầu nối mượt hóa, F1 cao nhất, bắt trọn vẹn câu đa chuỗi** |
+| **PhoBERT-DualHead** *(Đa nhiệm)* | 62.99% | 58.31% | **60.56%** *(+1.33%)* | 0.13% (18 lần) | 24.10% | Khống chế báo động giả qua Intent Head |
 
 #### 💡 Bảng So Sánh Bản Chất 3 Trường Phái (Dễ hiểu cho Thuyết minh & Bảo vệ):
 
@@ -156,10 +157,10 @@ Doan/
 | :--- | :--- | :--- | :--- |
 | **Bản chất kiến trúc** | Softmax quyết định độc lập từng từ | CRF ràng buộc chuyển nhãn toàn cục | BiLSTM nhớ dài 2 chiều + CRF Viterbi |
 | **Hình tượng ẩn dụ** | **Người gác cổng vội vàng:** Nhìn từng từ đơn lẻ để gắn nhãn, không quan tâm từ trước/sau là gì. | **Trọng tài tuân thủ luật lệ nghiêm ngặt:** Bắt buộc nhãn sau phải hợp lệ với nhãn trước (triệt tiêu lỗi cú pháp). | **Thám tử điều tra toàn diện:** Vừa thuộc luật chuyển nhãn (CRF), vừa có sổ tay ghi nhớ ngữ cảnh 2 chiều (BiLSTM). |
-| **Lỗi cú pháp $O \to I\text{-HOS}$** | **26.4%** (lỗi nghiêm trọng) | **0.0% (Triệt tiêu 100%)** | **0.0% (Triệt tiêu 100%)** |
-| **Bóc tách ranh giới từ ghép** | Kém (**25.8%** lỗi, chém cụt từ) | Khá (**18.4%** lỗi) | **Tốt nhất (14.6% lỗi - Giảm 11.2%)** |
-| **Xử lý câu đa cụm xúc phạm cách xa** | Thường chỉ bắt cụm đầu, sót cụm sau | Giảm sót nhưng dễ gom nhầm từ sạch ở giữa | **Bắt trọn vẹn từng cụm phân tán (+5.8% Recall)** |
-| **Span-F1 Benchmark** | **66.28%** | **68.61% (+2.33%)** | **70.31% (+4.03%)** |
+| **Lỗi cú pháp $O \to I\text{-HOS}$** | **110 lần (0.82%)** | **5 lần (0.04% - Giảm 95%)** | **8 lần (0.06% - Triệt tiêu)** |
+| **Bóc tách ranh giới từ ghép** | 23.89% | 23.94% | **Tốt nhất (22.93% lỗi)** |
+| **Xử lý câu đa cụm xúc phạm cách xa** | Thường chỉ bắt cụm đầu, sót cụm sau | Giảm sót nhưng dễ gom nhầm từ sạch ở giữa | **Bắt trọn vẹn từng cụm phân tán (Multi-Span F1 63.35%)** |
+| **Span-F1 Benchmark** | **59.23%** | **61.24% (+2.01%)** | **62.21% (+2.98%)** |
 
 ---
 
@@ -172,16 +173,16 @@ Nhiều thành viên và Thầy có thể thắc mắc: *"Bài báo ViHOS đã c
 * Tác giả công bố bộ dữ liệu ViHOS chủ yếu để làm **Benchmark Dataset**.
 * Trong repo của tác giả (`phusroyal/ViHOS`), họ **CHỈ CHẠY 3 BASELINE CƠ BẢN**:
   1. `BiLSTM-CRF`: Dùng static Word2Vec cũ kỹ, không hiểu ngữ cảnh tiếng Việt hiện đại, F1 thấp.
-  2. `PhoBERT-Linear` (Baseline gốc của Thầy): Dùng Softmax phân loại từng token độc lập, **tồn tại 2 điểm hạn chế lớn:**
-     * Lỗi sinh nhãn phi logic $O \to I\text{-HOS}$ chiếm tới **26.4%**.
-     * Lỗi lệch ranh giới từ ghép tiếng Việt chiếm **25.8%**.
+  2. `PhoBERT-Linear` (Baseline gốc): Dùng Softmax phân loại từng token độc lập, **tồn tại 2 điểm hạn chế lớn:**
+     * Lỗi sinh nhãn phi logic $O \to I\text{-HOS}$ chiếm tới **0.82% (110 lần)**.
+     * Lỗi lệch ranh giới từ ghép tiếng Việt chiếm **23.89%**.
   3. `XLMR-Linear`: XLM-RoBERTa phân loại độc lập.
 * 👉 **BÀI BÁO GỐC HOÀN TOÀN CHƯA CÓ KIẾN TRÚC KẾT HỢP PhoBERT + BiLSTM + CRF!**
 
 ### 2. Bốn (04) Điểm Mới Đột Phá Của Đồ Án Nhóm Mình:
 1. **Đề xuất Kiến trúc Mô hình Mới (PhoBERT-BiLSTM-CRF - Stacked Architecture):**
    * Kết hợp 3 tầng: **PhoBERT** (ngữ cảnh 768d) + **BiLSTM** (Smoothing bridge & trí nhớ tuần tự dài 512d) + **CRF** (ràng buộc toàn cục & Viterbi decoding).
-   * **Nâng Span-F1 từ 66.28% lên 70.31% (+4.03%)**, đánh bại toàn bộ các baseline trong bài báo gốc.
+   * **Nâng Span-F1 từ 59.23% lên 62.21% (+2.98%)**, cải thiện rõ rệt so với baseline Linear và các baseline đơn thuần.
 2. **Kỹ thuật First-token Subword Alignment & Differential Learning Rate:**
    * Giải quyết triệt để vấn đề phân tách từ ghép của BPE Tokenizer đuôi `@@`.
    * Phân chia $lr = 2\times 10^{-5}$ cho PhoBERT (bảo toàn tri thức pre-trained 20GB) và $lr = 1\times 10^{-3}$ cho BiLSTM-CRF (học nhanh tham số mới).
@@ -199,7 +200,7 @@ Một điểm cực kỳ giá trị để cả 5 thành viên ghi điểm tuyệ
 
 * **Ca thử nghiệm thực tế (Case Study):**
   * Câu: *"Món ăn của quán này bình thường nhưng giá cả hơi đắt như con kẹt"*
-  * `PhoBERT-Linear` (Baseline Thầy): Bắt được cụm *"con kẹt"* (do Softmax quyết định độc lập trên từng từ đơn lẻ).
+  * `PhoBERT-Linear` (Baseline): Bắt được cụm *"con kẹt"* (do Softmax quyết định độc lập trên từng từ đơn lẻ).
   * `PhoBERT-BiLSTM-CRF` (Đề xuất): Bỏ sót cụm này (False Negative - dự đoán toàn bộ câu là nhãn sạch `O`).
 * **Bản chất khoa học:**
   1. *"Con kẹt"* là tiếng lóng giảm thanh/biến âm (Euphemistic Slang) của *"con cặc"*. Trong tiếng Việt chuẩn, từ *"kẹt"* là từ sạch mang nghĩa trung tính (*kẹt xe, kẹt tiền*).

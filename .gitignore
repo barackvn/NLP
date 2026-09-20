@@ -32,6 +32,10 @@ frontend/dist/
 # ChatGPT & Presentation temporary build folders
 .chart-data*/
 .presentation*/
+.slide_reorder/
 *.pptx
 outputs/
-scratch_*.py
+scratch_*
+
+# Ignore MayHoc folder if present
+MayHoc/

@@ -1,13 +1,13 @@
-# Bảng đối chứng hiện tại — cập nhật 16/09/2026
+# Bảng đối chứng thực nghiệm (Ablation Study) — Tập Test ViHOS (1.106 câu)
 
-| Mô hình | Precision (%) | Recall (%) | Span-F1 (%) | Lỗi O → I-HOS (%) | Lỗi ranh giới (%) |
-|---|---:|---:|---:|---:|---:|
-| PhoBERT–Linear | 67,12 | 65,46 | 66,28 | 26,4 | 25,8 |
-| PhoBERT–CRF | 69,40 | 67,85 | 68,61 | 0,0 | 18,4 |
-| PhoBERT–BiLSTM–CRF (DualHead) | 74,82 | 68,20 | 71,35 | 0,0 | 13,8 |
+| Mô hình                      | Cơ chế giải mã             |   Precision (%) |   Recall (%) |   Span-F1 (%) | Lỗi O -> I-HOS   |   Lỗi lệch ranh giới (%) |
+|:-----------------------------|:---------------------------|----------------:|-------------:|--------------:|:-----------------|-------------------------:|
+| 1. PhoBERT-Linear (Baseline) | Softmax độc lập            |           60.34 |        58.15 |         59.23 | 0.82% (110 lần)  |                    23.89 |
+| 2. PhoBERT-CRF (Ablation)    | Viterbi toàn cục           |           63.37 |        59.26 |         61.24 | 0.04% (5 lần)    |                    23.94 |
+| 3. PhoBERT-BiLSTM-CRF        | Viterbi + Smoothing        |           65    |        59.65 |         62.21 | 0.06% (8 lần)    |                    22.93 |
+| 4. PhoBERT-DualHead          | Viterbi + Multi-Task Gated |           62.99 |        58.31 |         60.56 | 0.13% (18 lần)   |                    24.1  |
 
-Nguồn: benchmark_data trong run_ablation_reports.py và hình 01–02 hiện có. Số liệu khai báo trong mã tạo báo cáo, chưa được xác minh lại bằng log test trong lần cập nhật tài liệu.
-
-DualHead tăng 5,07 điểm F1 so với Linear, 2,74 điểm so với CRF. Lỗi ranh giới thấp hơn Linear 12,0 điểm phần trăm, không phải mức giảm tương đối 12%. Kết quả 0% lỗi chuyển nhãn không bảo đảm mô hình luôn tuân thủ BIO trên mọi câu.
-
-Ma trận ở hình 03 có phạm vi khác: 100 câu đầu test, 1.186 từ. Hình 04 là thống kê 11 dạng lỗi trên 100 câu phân tích, không phải F1 đơn chuỗi/đa chuỗi.
+*Nguồn: Đối chiếu trực tiếp từ 4 file checkpoint trên toàn bộ tập test ViHOS, lưu tại reports/test_evaluation_official_log.txt.*
+- **PhoBERT-BiLSTM-CRF** đạt Span-F1 cao nhất (**62,21%**), cải thiện **+2,98% F1** và **+4,66% Precision** so với PhoBERT-Linear gốc.
+- **Tầng CRF** triệt tiêu hơn 92% lỗi cú pháp chuyển nhãn vi phạm nguyên tắc BIO (`O -> I-HOS`), giảm từ 110 lần (Linear) xuống còn 5–8 lần.
+- **Nhánh DualHead** (60,56%) cải thiện so với Linear (+1,33%) nhưng dập tắt một số nhãn span biên do ngưỡng cố định 0.5, mở ra hướng tinh chỉnh threshold tuning.

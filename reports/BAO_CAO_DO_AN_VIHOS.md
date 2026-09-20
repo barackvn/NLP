@@ -174,7 +174,7 @@ Nhóm lỗi đánh dấu nhầm từ động vật giảm 8 còn 1, tức giảm
 
 ### 4.7. Ca từ lóng ở bản đơn đầu trước đây
 
-Báo cáo cũ ghi câu “Món ăn của quán này bình thường nhưng giá cả hơi đắt như con kẹt”: Linear và CRF tìm được cụm, còn BiLSTM–CRF **chưa có DualHead** bỏ sót. Ca này được giữ làm ví dụ về giới hạn của điểm tổng hợp, không phải kết quả thử DualHead mới. Giả thuyết làm mượt quá mức chưa có thí nghiệm xác nhận cơ chế.
+Báo cáo cũ ghi câu “Món ăn của quán này bình thường nhưng giá cả hơi đắt như con ket”: Linear và CRF tìm được cụm, còn BiLSTM–CRF **chưa có DualHead** bỏ sót. Ca này được giữ làm ví dụ về giới hạn của điểm tổng hợp, không phải kết quả thử DualHead mới. Giả thuyết làm mượt quá mức chưa có thí nghiệm xác nhận cơ chế.
 
 ## 5. Ứng dụng
 
@@ -209,3 +209,4 @@ Ma trận mới mô tả riêng 100 câu đầu test với 1.186 từ. Kết qu�
 - `SLIDES_THUYET_TRINH_18_TRANG.md`: nội dung trình chiếu đồng bộ.
 
 **Tài liệu tham khảo trong hồ sơ dự án:** Tran và cộng sự (2023), *ViHOS: Vietnamese Hate and Offensive Spans Detection*; Nguyen và Nguyen (2020), *PhoBERT*; Lample và cộng sự (2016), *Neural Architectures for Named Entity Recognition*; Lafferty và cộng sự (2001), *Conditional Random Fields*. Không sử dụng danh sách này để suy ra tuyên bố mới hoàn toàn hoặc SOTA khi chưa có đối chứng tương đương.
+

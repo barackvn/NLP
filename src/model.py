@@ -415,7 +415,7 @@ class PhoBERT_CRF(nn.Module):
 
 class PhoBERT_Linear(nn.Module):
     """
-    Baseline gốc của Giảng viên (Original Baseline):
+    Mô hình cơ sở (Original Baseline):
     PhoBERT + Dropout + Linear Classification Head (Softmax độc lập tại từng token)
     """
     def __init__(

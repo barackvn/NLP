@@ -7,7 +7,7 @@
 ## 🎯 KẾT QUẢ ĐẦU RA BẮT BUỘC CẦN BÀN GIAO (DELIVERABLES)
 1. **File trọng số chính:** `best_phobert_bilstm_crf.pt` (Đưa vào thư mục `Doan/checkpoints/` trên máy local để kích hoạt Web App AI thật).
 2. **Hai file trọng số đối chứng (Ablation):**
-   * `baseline_phobert_linear.pt` (Baseline gốc của Thầy).
+   * `baseline_phobert_linear.pt` (Mô hình Baseline PhoBERT-Linear).
    * `baseline_phobert_crf.pt` (Bóc tách vai trò của tầng BiLSTM).
 3. **Ảnh chụp màn hình (Screenshots):** Log quá trình train, biểu đồ Loss và F1 qua từng epoch để làm tư liệu đưa vào Slide bảo vệ (Slide 10–11).
 
@@ -79,7 +79,7 @@ Chạy lệnh sau để bắt đầu huấn luyện. Quá trình này chạy t�
 Để có số liệu lập Bảng so sánh nộp Thầy và Hội đồng, chạy tiếp 2 lệnh sau:
 
 ```bash
-# 1. Train Baseline gốc của Thầy (PhoBERT-Linear)
+# 1. Train Baseline PhoBERT-Linear
 !python -m src.train \
     --model_type phobert_linear \
     --train_path data/processed/train.json \

@@ -26,7 +26,7 @@ const INITIAL_PREDICTION = {
     {
       alias: "linear",
       key: "PhoBERT-Linear",
-      name: "PhoBERT-Linear (Baseline Thầy)",
+      name: "PhoBERT-Linear (Baseline)",
       num: "1",
       f1_val: "0.663",
       color: "red",
@@ -695,26 +695,34 @@ export default function App() {
                 <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
                   <td style={{ padding: '12px 14px', fontWeight: 600 }}>1. PhoBERT-Linear</td>
                   <td style={{ padding: '12px 14px' }}>Softmax độc lập</td>
-                  <td style={{ padding: '12px 14px' }}>67.12%</td>
-                  <td style={{ padding: '12px 14px' }}>65.46%</td>
-                  <td style={{ padding: '12px 14px', color: '#EF4444', fontWeight: 700 }}>66.28%</td>
-                  <td style={{ padding: '12px 14px' }}>25.8%</td>
+                  <td style={{ padding: '12px 14px' }}>60.34%</td>
+                  <td style={{ padding: '12px 14px' }}>58.15%</td>
+                  <td style={{ padding: '12px 14px', color: '#EF4444', fontWeight: 700 }}>59.23%</td>
+                  <td style={{ padding: '12px 14px' }}>23.89%</td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
                   <td style={{ padding: '12px 14px', fontWeight: 600 }}>2. PhoBERT-CRF</td>
                   <td style={{ padding: '12px 14px' }}>Viterbi toàn cục</td>
-                  <td style={{ padding: '12px 14px' }}>69.40%</td>
-                  <td style={{ padding: '12px 14px' }}>67.85%</td>
-                  <td style={{ padding: '12px 14px', color: '#2563EB', fontWeight: 700 }}>68.61% (+2.33%)</td>
-                  <td style={{ padding: '12px 14px' }}>18.4%</td>
+                  <td style={{ padding: '12px 14px' }}>63.37%</td>
+                  <td style={{ padding: '12px 14px' }}>59.26%</td>
+                  <td style={{ padding: '12px 14px', color: '#2563EB', fontWeight: 700 }}>61.24% (+2.01%)</td>
+                  <td style={{ padding: '12px 14px' }}>23.94%</td>
                 </tr>
-                <tr>
+                <tr style={{ borderBottom: '1px solid #E2E8F0' }}>
                   <td style={{ padding: '12px 14px', fontWeight: 600, color: '#10B981' }}>3. PhoBERT-BiLSTM-CRF</td>
                   <td style={{ padding: '12px 14px' }}>Viterbi + BiLSTM 2 chiều</td>
-                  <td style={{ padding: '12px 14px' }}>71.15%</td>
-                  <td style={{ padding: '12px 14px' }}>69.50%</td>
-                  <td style={{ padding: '12px 14px', color: '#10B981', fontWeight: 700 }}>70.31% (+4.03%)</td>
-                  <td style={{ padding: '12px 14px', fontWeight: 600, color: '#10B981' }}>14.6% (Giảm 11.2%)</td>
+                  <td style={{ padding: '12px 14px' }}>65.00%</td>
+                  <td style={{ padding: '12px 14px' }}>59.65%</td>
+                  <td style={{ padding: '12px 14px', color: '#10B981', fontWeight: 700 }}>62.21% (+2.98%)</td>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: '#10B981' }}>22.93% (Thấp nhất)</td>
+                </tr>
+                <tr>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: '#6366F1' }}>4. PhoBERT-DualHead</td>
+                  <td style={{ padding: '12px 14px' }}>Viterbi + Multi-Task Gated</td>
+                  <td style={{ padding: '12px 14px' }}>62.99%</td>
+                  <td style={{ padding: '12px 14px' }}>58.31%</td>
+                  <td style={{ padding: '12px 14px', color: '#6366F1', fontWeight: 700 }}>60.56% (+1.33%)</td>
+                  <td style={{ padding: '12px 14px' }}>24.10%</td>
                 </tr>
               </tbody>
             </table>
@@ -840,7 +848,7 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span className="badge-num red">1</span>
-                      <strong style={{ fontSize: '0.92rem' }}>PhoBERT-Linear (Baseline Thầy)</strong>
+                      <strong style={{ fontSize: '0.92rem' }}>PhoBERT-Linear (Baseline)</strong>
                     </div>
                     <span className={`status-pill-badge ${backendOnline ? 'online' : 'offline'}`}>
                       {backendOnline ? '🟢 ĐÃ KẾT NỐI' : '🔴 MẤT KẾT NỐI'}

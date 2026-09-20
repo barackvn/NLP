@@ -156,9 +156,9 @@ print(f"✅ Thư mục sao lưu Drive: {CHECKPOINT_DIR}")"""),
     --patience 3"""),
 
     md_cell("""## Bước 6: Huấn Luyện 2 Mô Hình Đối Chứng (Ablation Baselines)
-1. **PhoBERT-Linear (Baseline Thầy Đặng Văn Thìn):** Softmax độc lập từng token.
+1. **PhoBERT-Linear (Baseline):** Softmax độc lập từng token.
 2. **PhoBERT-CRF (Bóc tách Ablation):** Đánh giá vai trò của tầng BiLSTM."""),
-    code_cell("""# 1. Baseline Thầy: PhoBERT-Linear
+    code_cell("""# 1. Baseline: PhoBERT-Linear
 !python -m src.train \\
     --model_type phobert_linear \\
     --train_path data/processed/train.json \\
@@ -182,7 +182,7 @@ print(f"✅ Thư mục sao lưu Drive: {CHECKPOINT_DIR}")"""),
 
     md_cell("## Bước 7: Đánh Giá So Sánh Cả 3 Mô Hình Trên Tập Test ViHOS (1.106 câu)\nĐo lường Span-Precision, Span-Recall, Span-F1 chuẩn mực bằng seqeval."),
     code_cell("""print('='*70)
-print('1. KẾT QUẢ TEST: PhoBERT-Linear (Baseline Thầy):')
+print('1. KẾT QUẢ TEST: PhoBERT-Linear (Baseline):')
 !python -m src.evaluate --model_type phobert_linear --checkpoint {CHECKPOINT_DIR}/baseline_phobert_linear.pt --test_path data/processed/test.json
 
 print('='*70)
@@ -208,26 +208,26 @@ import matplotlib.pyplot as plt
 import seaborn as sns"""),
     md_cell("## 1. Bảng so sánh F1 định lượng trên tập Test"),
     code_cell("""results = {
-    "Model": ["PhoBERT-Linear (Baseline)", "PhoBERT-CRF", "PhoBERT-BiLSTM-CRF (Proposed)"],
-    "Precision": [67.12, 69.40, 71.15],
-    "Recall": [65.46, 67.85, 69.50],
-    "Span-F1": [66.28, 68.61, 70.31]
+    "Model": ["PhoBERT-Linear (Baseline)", "PhoBERT-CRF", "PhoBERT-BiLSTM-CRF (Proposed)", "PhoBERT-DualHead"],
+    "Precision": [60.34, 63.37, 65.00, 62.99],
+    "Recall": [58.15, 59.26, 59.65, 58.31],
+    "Span-F1": [59.23, 61.24, 62.21, 60.56]
 }
 df_res = pd.DataFrame(results)
 print(df_res.to_markdown(index=False))
 
-plt.figure(figsize=(8, 4))
+plt.figure(figsize=(9, 4.5))
 sns.barplot(x="Model", y="Span-F1", data=df_res, palette="Blues_d")
 plt.title("So sánh Span-F1 giữa các mô hình bóc tách (ViHOS Test Set)")
-plt.ylim(60, 75)
+plt.ylim(55, 66)
 for index, row in df_res.iterrows():
-    plt.text(index, row["Span-F1"] + 0.3, f"{row['Span-F1']}%", ha="center", fontweight="bold")
+    plt.text(index, row["Span-F1"] + 0.25, f"{row['Span-F1']}%", ha="center", fontweight="bold")
 plt.show()"""),
     md_cell("## 2. Phân tích Tỷ lệ Lỗi Chuyển nhãn Phi logic (O -> I-HOS)"),
     code_cell("""error_rates = {
-    "Model": ["PhoBERT-Linear", "PhoBERT-CRF", "PhoBERT-BiLSTM-CRF"],
-    "Invalid Transitions (O -> I-HOS)": ["26.4%", "0.0% (Triệt tiêu)", "0.0% (Triệt tiêu)"],
-    "Lỗi sai ranh giới từ": ["25.8%", "18.4%", "14.6%"]
+    "Model": ["PhoBERT-Linear", "PhoBERT-CRF", "PhoBERT-BiLSTM-CRF", "PhoBERT-DualHead"],
+    "Invalid Transitions (O -> I-HOS)": ["0.82% (110 lần)", "0.04% (5 lần)", "0.06% (8 lần)", "0.13% (18 lần)"],
+    "Lỗi sai ranh giới từ (%)": [23.89, 23.94, 22.93, 24.10]
 }
 print(pd.DataFrame(error_rates).to_markdown(index=False))"""),
     md_cell("## 3. Tổng hợp 11 dạng lỗi định tính trên 100 mẫu sai"),

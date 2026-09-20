@@ -43,7 +43,7 @@ MODEL_CONFIGS = {
     "linear": {
         "key": "PhoBERT-Linear",
         "file": "baseline_phobert_linear.pt",
-        "name": "PhoBERT-Linear (Baseline Thầy)",
+        "name": "PhoBERT-Linear (Baseline)",
         "num": "1",
         "f1_val": "0.663",
         "color": "red",

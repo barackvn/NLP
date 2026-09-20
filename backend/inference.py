@@ -64,7 +64,7 @@ class ViHOSInferenceEngine:
                     self.model_name = "🔬 PhoBERT-CRF (Bóc tách Ablation)"
                 else:
                     self.model = PhoBERT_Linear(pretrained_name=pretrained_name)
-                    self.model_name = "📌 PhoBERT-Linear (Baseline Thầy)"
+                    self.model_name = "📌 PhoBERT-Linear (Baseline)"
 
                 self.model.load_state_dict(state_dict)
                 self.model.to(self.device)

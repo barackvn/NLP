@@ -444,13 +444,13 @@ def create_visual_15_slides():
     t.columns[2].width = 5200000; t.columns[3].width = 5442709
 
     comparison_data = [
-        ("Tiêu chí", "1. PhoBERT-Linear (Baseline Thầy)", "2. PhoBERT-CRF (Bóc tách Ablation)", "3. PhoBERT-BiLSTM-CRF (Đề xuất SOTA)"),
+        ("Tiêu chí", "1. PhoBERT-Linear (Baseline)", "2. PhoBERT-CRF (Bóc tách Ablation)", "3. PhoBERT-BiLSTM-CRF (Đề xuất SOTA)"),
         ("Bản chất kiến trúc", "Softmax quyết định độc lập trên từng từ", "CRF ràng buộc chuyển nhãn toàn cục", "BiLSTM nhớ dài 2 chiều + CRF Viterbi"),
         ("Hình tượng ẩn dụ", "Người gác cổng vội vàng: Nhìn từng từ một cách độc lập để gắn nhãn, không quan tâm từ trước/sau là gì.", "Trọng tài tuân thủ luật lệ nghiêm ngặt: Bắt buộc nhãn sau phải hợp lệ với nhãn trước (triệt tiêu lỗi cú pháp).", "Thám tử điều tra toàn diện: Vừa thuộc luật chuyển nhãn (CRF), vừa có sổ tay ghi nhớ ngữ cảnh 2 chiều (BiLSTM)."),
-        ("Lỗi cú pháp O -> I-HOS", "Rất cao (26.4%): Nhãn I xuất hiện vô cớ mà không có B mở đầu.", "0.0% (Triệt tiêu 100%) nhờ ma trận phạt chuyển trạng thái A_(i,j).", "0.0% (Triệt tiêu 100%) nhờ ma trận phạt chuyển trạng thái A_(i,j)."),
-        ("Lỗi ranh giới từ ghép tiếng Việt", "Cao (25.8%): Dễ cắt cụt từ ghép (mất... bỏ dạy).", "Trung bình (18.4%).", "Thấp nhất (14.6% - Giảm 11.2%): Bóc tách nguyên vẹn ranh giới từ ghép."),
-        ("Xử lý câu đa cụm xúc phạm cách xa", "Kém: Thường chỉ bắt cụm đầu và bỏ sót các cụm phân tán phía sau.", "Khá: Giảm sót cụm nhưng có thể gom nhầm từ sạch ở giữa vào span.", "Xuất sắc (+5.8% Recall): Định vị chuẩn xác từng cụm phân tán độc lập."),
-        ("Span-F1 Benchmark", "66.28%", "68.61% (+2.33%)", "70.31% (+4.03%)")
+        ("Lỗi cú pháp O -> I-HOS", "110 lần (0.82%): Nhãn I xuất hiện phi lý không có B mở đầu.", "5 lần (0.04% - Giảm hơn 95%) nhờ ma trận phạt chuyển trạng thái.", "8 lần (0.06% - Triệt tiêu) nhờ ma trận chuyển trạng thái CRF."),
+        ("Lỗi ranh giới từ ghép tiếng Việt", "23.89%: Dễ cắt cụt từ ghép.", "23.94%.", "Thấp nhất (22.93%): Bóc tách nguyên vẹn ranh giới từ ghép."),
+        ("Xử lý câu đa cụm xúc phạm cách xa", "Kém hơn: Multi-Span F1 chỉ đạt 60.74%.", "Khá: Giảm sót cụm phân tán.", "Xuất sắc (Multi-Span F1 63.35% - Tăng +2.61%): Bắt trọn vẹn từng cụm."),
+        ("Span-F1 Benchmark", "59.23%", "61.24% (+2.01%)", "62.21% (+2.98%)")
     ]
 
     for i, row in enumerate(comparison_data):
@@ -637,8 +637,8 @@ def create_visual_15_slides():
     add_footer(s15, 15)
 
     # 3 Con số thành quả lớn nhất
-    add_stat_box(s15, 1016000, 2150000, 6200000, 4200000, "70.31%", "Span-F1 SOTA Đạt Đỉnh", "+4.03% so với baseline của Thầy", num_color=COLOR_GREEN_SOTA, bg_color=RGBColor(0xEA, 0xF8, 0xEA), border_color=RGBColor(0xA5, 0xD6, 0xA7))
-    add_stat_box(s15, 7730000, 2150000, 6200000, 4200000, "100%", "Triệt Tiêu Lỗi Cú Pháp", "Lỗi O -> I rớt từ 26.4% về 0.0%", num_color=COLOR_PRIMARY_BLUE)
+    add_stat_box(s15, 1016000, 2150000, 6200000, 4200000, "62.21%", "Span-F1 SOTA Đạt Đỉnh", "+2.98% so với Baseline", num_color=COLOR_GREEN_SOTA, bg_color=RGBColor(0xEA, 0xF8, 0xEA), border_color=RGBColor(0xA5, 0xD6, 0xA7))
+    add_stat_box(s15, 7730000, 2150000, 6200000, 4200000, ">92%", "Triệt Tiêu Lỗi Cú Pháp", "Lỗi O -> I rớt từ 110 về 8 lần", num_color=COLOR_PRIMARY_BLUE)
     add_stat_box(s15, 14450000, 2150000, 6200000, 4200000, "~100 ms", "Tốc Độ Suy Luận CPU", "Sản phẩm Client-Server thực tế", num_color=COLOR_CYAN_ACCENT)
 
     # Khối định hướng tiếp theo

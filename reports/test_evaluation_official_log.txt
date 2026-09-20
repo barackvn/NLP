@@ -1,0 +1,99 @@
+================================================================================
+CHƯƠNG TRÌNH ĐỐI CHIẾU & ĐÁNH GIÁ CHÍNH THỨC TRÊN TẬP TEST (ViHOS)
+Thời gian bắt đầu: 2026-09-20 16:57:46
+================================================================================
+Device: cpu
+Tập test: C:\Users\Admin\Desktop\Hosonhaphoc\6-Xử lí Ngôn ngữ Tự nhiên\Doan\data\processed\test.json
+PhoBERT backbone: vinai/phobert-base-v2
+Batch size: 32, Max length: 128
+Tổng số mẫu test đã nạp: 1106 câu
+
+--------------------------------------------------------------------------------
+Đang đánh giá mô hình: 1. PhoBERT-Linear (Baseline Gốc)
+Checkpoint: baseline_phobert_linear.pt
+Đã nạp checkpoint thành công (Được lưu tại Epoch 5)
+Thời gian đánh giá: 120.5 giây
+Kết quả Span-Level (IOB2 Exact Match):
+   + Precision: 60.34%
+   + Recall:    58.15%
+   + Span-F1:   59.23%
+Lỗi cú pháp chuỗi:
+   + Lỗi O -> I-HOS: 110 lần (0.82%)
+   + Lỗi lệch ranh giới span: 291 / 1218 (23.89%)
+Confusion Matrix (Token level):
+            Pred_O  Pred_B-HOS  Pred_I-HOS
+True_O       10643         228         249
+True_B-HOS     265         888         111
+True_I-HOS     370         102         563
+
+Đã xuất file dự đoán chi tiết từng câu ra: test_predictions_phobert_linear.json
+--------------------------------------------------------------------------------
+Đang đánh giá mô hình: 2. PhoBERT-CRF (Ablation Bóc Tách)
+Checkpoint: baseline_phobert_crf.pt
+Đã nạp checkpoint thành công (Được lưu tại Epoch 4)
+Thời gian đánh giá: 121.2 giây
+Kết quả Span-Level (IOB2 Exact Match):
+   + Precision: 63.37%
+   + Recall:    59.26%
+   + Span-F1:   61.24%
+Lỗi cú pháp chuỗi:
+   + Lỗi O -> I-HOS: 5 lần (0.04%)
+   + Lỗi lệch ranh giới span: 283 / 1182 (23.94%)
+Confusion Matrix (Token level):
+            Pred_O  Pred_B-HOS  Pred_I-HOS
+True_O       10782         192         146
+True_B-HOS     304         878          82
+True_I-HOS     420         112         503
+
+Đã xuất file dự đoán chi tiết từng câu ra: test_predictions_phobert_crf.json
+--------------------------------------------------------------------------------
+Đang đánh giá mô hình: 3. PhoBERT-BiLSTM-CRF (Smoothing Bridge)
+Checkpoint: best_phobert_bilstm_crf.pt
+Đã nạp checkpoint thành công (Được lưu tại Epoch 3)
+Thời gian đánh giá: 127.3 giây
+Kết quả Span-Level (IOB2 Exact Match):
+   + Precision: 65.00%
+   + Recall:    59.65%
+   + Span-F1:   62.21%
+Lỗi cú pháp chuỗi:
+   + Lỗi O -> I-HOS: 8 lần (0.06%)
+   + Lỗi lệch ranh giới span: 266 / 1160 (22.93%)
+Confusion Matrix (Token level):
+            Pred_O  Pred_B-HOS  Pred_I-HOS
+True_O       10822         179         119
+True_B-HOS     315         867          82
+True_I-HOS     444         114         477
+
+Đã xuất file dự đoán chi tiết từng câu ra: test_predictions_phobert_bilstm_crf.json
+--------------------------------------------------------------------------------
+Đang đánh giá mô hình: 4. PhoBERT-DualHead-BiLSTM-CRF (Đề Xuất Đa Nhiệm)
+Checkpoint: best_phobert_dualhead_bilstm_crf.pt
+Đã nạp checkpoint thành công (Được lưu tại Epoch 5)
+Thời gian đánh giá: 132.6 giây
+Kết quả Span-Level (IOB2 Exact Match):
+   + Precision: 62.99%
+   + Recall:    58.31%
+   + Span-F1:   60.56%
+Lỗi cú pháp chuỗi:
+   + Lỗi O -> I-HOS: 18 lần (0.13%)
+   + Lỗi lệch ranh giới span: 282 / 1170 (24.10%)
+Confusion Matrix (Token level):
+            Pred_O  Pred_B-HOS  Pred_I-HOS
+True_O       10657         209         254
+True_B-HOS     272         866         126
+True_I-HOS     389          95         551
+
+Đã xuất file dự đoán chi tiết từng câu ra: test_predictions_phobert_dualhead_bilstm_crf.json
+================================================================================
+BẢNG TỔNG KẾT ĐỐI CHIẾU CHÍNH THỨC TRÊN TOÀN BỘ 1.106 CÂU TẬP TEST:
+================================================================================
+                                          Mô hình                        Loại  Epoch tốt nhất  Precision (%)  Recall (%)  Span-F1 (%)  Lỗi O -> I-HOS (%)  Lỗi lệch ranh giới (%)  Thời gian eval (s)
+                 1. PhoBERT-Linear (Baseline Gốc)              phobert_linear               5          60.34       58.15        59.23                0.82                   23.89               120.5
+               2. PhoBERT-CRF (Ablation Bóc Tách)                 phobert_crf               4          63.37       59.26        61.24                0.04                   23.94               121.2
+         3. PhoBERT-BiLSTM-CRF (Smoothing Bridge)          phobert_bilstm_crf               3          65.00       59.65        62.21                0.06                   22.93               127.3
+4. PhoBERT-DualHead-BiLSTM-CRF (Đề Xuất Đa Nhiệm) phobert_dualhead_bilstm_crf               5          62.99       58.31        60.56                0.13                   24.10               132.6
+
+✅ Đã lưu file Markdown chính thức: C:\Users\Admin\Desktop\Hosonhaphoc\6-Xử lí Ngôn ngữ Tự nhiên\Doan\reports\test_benchmark_results.md
+✅ Đã lưu file JSON chính thức: C:\Users\Admin\Desktop\Hosonhaphoc\6-Xử lí Ngôn ngữ Tự nhiên\Doan\reports\test_benchmark_results.json
+Tổng thời gian toàn bộ quá trình: 505.0 giây
+================================================================================

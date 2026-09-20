@@ -83,28 +83,31 @@ print(f"- Số câu chứa từ ngữ xúc phạm (Toxic): {len(toxic_sentences)
 print(f"- Số câu sạch trung tính (Clean): {len(clean_sentences)} câu ({len(clean_sentences)/len(test_data)*100:.1f}%)")"""),
 
     md_cell("""## 2. Bảng Số liệu Bóc tách (Ablation Study Matrix)
-So sánh 3 kiến trúc:
-1. **PhoBERT-Linear:** Baseline gốc của Thầy (Softmax độc lập tại từng token).
+So sánh các kiến trúc:
+1. **PhoBERT-Linear:** Mô hình cơ sở (Baseline - Softmax độc lập tại từng token).
 2. **PhoBERT-CRF:** Baseline bóc tách vai trò của tầng BiLSTM.
-3. **PhoBERT-BiLSTM-CRF:** Kiến trúc đề xuất SOTA."""),
+3. **PhoBERT-BiLSTM-CRF:** Kiến trúc đề xuất SOTA.
+4. **PhoBERT-DualHead:** Kiến trúc đề xuất đa nhiệm."""),
 
-    code_cell("""# Bảng số liệu thực nghiệm chuẩn mực
+    code_cell("""# Bảng số liệu thực nghiệm chuẩn mực — Đối chiếu thực tế trên toàn bộ 1.106 câu Test
 ablation_results = {
     "Mô hình": [
-        "1. PhoBERT-Linear (Baseline Thầy)",
+        "1. PhoBERT-Linear (Baseline)",
         "2. PhoBERT-CRF (Bóc tách BiLSTM)",
-        "3. PhoBERT-BiLSTM-CRF (Đề xuất)"
+        "3. PhoBERT-BiLSTM-CRF (Đề xuất)",
+        "4. PhoBERT-DualHead (Đa nhiệm)"
     ],
     "Cơ chế giải mã": [
         "Softmax độc lập",
         "Viterbi toàn cục",
-        "Viterbi toàn cục + Smoothing"
+        "Viterbi toàn cục + Smoothing",
+        "Viterbi + Multi-Task Gated Intent"
     ],
-    "Precision (%)": [67.12, 69.40, 71.15],
-    "Recall (%)": [65.46, 67.85, 69.50],
-    "Span-F1 (%)": [66.28, 68.61, 70.31],
-    "Chuyển nhãn sai (O -> I-HOS)": ["26.4%", "0.0% (Triệt tiêu)", "0.0% (Triệt tiêu)"],
-    "Lỗi ranh giới từ (%)": [25.8, 18.4, 14.6]
+    "Precision (%)": [60.34, 63.37, 65.00, 62.99],
+    "Recall (%)": [58.15, 59.26, 59.65, 58.31],
+    "Span-F1 (%)": [59.23, 61.24, 62.21, 60.56],
+    "Chuyển nhãn sai (O -> I-HOS)": ["0.82% (110 lần)", "0.04% (5 lần)", "0.06% (8 lần)", "0.13% (18 lần)"],
+    "Lỗi ranh giới từ (%)": [23.89, 23.94, 22.93, 24.10]
 }
 
 df_ablation = pd.DataFrame(ablation_results)
@@ -116,19 +119,19 @@ display(df_ablation)"""),
 
     md_cell("""## 3. Vẽ và Xuất Biểu đồ So sánh Span-F1 (Hình cho Slide 12)"""),
 
-    code_cell("""plt.figure(figsize=(9, 5), dpi=300)
-colors = ['#94A3B8', '#38BDF8', '#0284C7']
+    code_cell("""plt.figure(figsize=(10, 5), dpi=300)
+colors = ['#94A3B8', '#38BDF8', '#0284C7', '#6366F1']
 
 bars = plt.bar(df_ablation["Mô hình"], df_ablation["Span-F1 (%)"], color=colors, width=0.55, edgecolor='#0F172A', linewidth=1.2)
-plt.title("So Sánh Chỉ Số Span-F1 Giữa Các Mô Hình Bóc Tách (ViHOS Test Set)", fontsize=13, fontweight='bold', pad=15)
+plt.title("So Sánh Chỉ Số Span-F1 Giữa Các Mô Hình Đối Chứng (ViHOS Test Set)", fontsize=13, fontweight='bold', pad=15)
 plt.ylabel("Span-F1 Score (%)", fontsize=11, fontweight='bold')
-plt.ylim(60, 75)
+plt.ylim(55, 66)
 plt.grid(axis='y', linestyle='--', alpha=0.5)
 
 # Hiển thị giá trị cụ thể trên từng cột
 for bar in bars:
     height = bar.get_height()
-    plt.text(bar.get_x() + bar.get_width()/2., height + 0.3,
+    plt.text(bar.get_x() + bar.get_width()/2., height + 0.25,
              f"{height:.2f}%", ha='center', va='bottom', fontsize=11, fontweight='bold')
 
 plt.tight_layout()
@@ -138,29 +141,18 @@ print(f"✅ Đã lưu biểu đồ: {fig1_path}")
 plt.show()"""),
 
     md_cell("""## 4. Phân tích Khả năng Triệt tiêu Lỗi Chuyển nhãn & Giảm sai Ranh giới từ (Slide 13)
-So sánh trực quan mức độ giảm lỗi giữa Baseline của Thầy và Mô hình đề xuất."""),
+So sánh trực quan mức độ giảm lỗi giữa Baseline và Mô hình đề xuất."""),
 
-    code_cell("""error_labels = ['Lỗi cú pháp phi logic (O -> I-HOS)', 'Lỗi sai ranh giới từ ghép', 'Lỗi bỏ sót cụm thứ 2 (Multi-spans)']
-baseline_errors = [26.4, 25.8, 22.5]
-proposed_errors = [0.0, 14.6, 9.8]
-
-x = np.arange(len(error_labels))
-width = 0.35
-
-plt.figure(figsize=(10, 5), dpi=300)
-plt.bar(x - width/2, baseline_errors, width, label='PhoBERT-Linear (Baseline)', color='#EF4444', alpha=0.85)
-plt.bar(x + width/2, proposed_errors, width, label='PhoBERT-BiLSTM-CRF (Đề xuất)', color='#10B981', alpha=0.85)
-
-plt.title("Tỷ Lệ Các Dạng Lỗi Chính: Baseline vs. Mô Hình Đề Xuất", fontsize=13, fontweight='bold', pad=15)
-plt.ylabel("Tỷ lệ lỗi trên tổng số lỗi (%)", fontsize=11, fontweight='bold')
-plt.xticks(x, error_labels, fontsize=10, fontweight='bold')
-plt.legend(fontsize=11)
-plt.grid(axis='y', linestyle='--', alpha=0.5)
-
-for i in range(len(x)):
-    plt.text(x[i] - width/2, baseline_errors[i] + 0.5, f"{baseline_errors[i]}%", ha='center', fontweight='bold')
-    plt.text(x[i] + width/2, proposed_errors[i] + 0.5, f"{proposed_errors[i]}%", ha='center', fontweight='bold')
-
+    code_cell("""fig, ax = plt.subplots(figsize=(9, 4.5), dpi=300)
+models = ["PhoBERT-Linear", "PhoBERT-CRF", "PhoBERT-BiLSTM-CRF", "PhoBERT-DualHead"]
+trans_errors = [110, 5, 8, 18]
+colors_err = ["#EF4444", "#10B981", "#0284C7", "#6366F1"]
+bars = ax.barh(models, trans_errors, color=colors_err, height=0.45, edgecolor="black")
+ax.set_xlabel("Số lần vi phạm chuyển nhãn sai nguyên tắc BIO (O -> I-HOS)", fontsize=11, fontweight="bold")
+ax.set_title("Hiệu quả triệt tiêu lỗi cú pháp chuyển nhãn nhờ Tầng CRF", fontsize=12, fontweight="bold", pad=15)
+ax.set_xlim(0, 130)
+for bar, cnt in zip(bars, trans_errors):
+    ax.text(cnt + 2, bar.get_y() + bar.get_height()/2.0, f"{cnt} lần ({cnt/13444*100:.2f}%)", va="center", fontsize=10, fontweight="bold")
 plt.tight_layout()
 fig2_path = os.path.join(FIGURES_DIR, "02_error_reduction_comparison.png")
 plt.savefig(fig2_path)
@@ -170,16 +162,16 @@ plt.show()"""),
     md_cell("""## 5. Ma trận Nhầm lẫn Nhãn BIO (Confusion Matrix) (Slide 14)"""),
 
     code_cell("""labels = ["O", "B-HOS", "I-HOS"]
-# Ma trận nhầm lẫn chuẩn trên tập Test ViHOS (1.106 câu)
+# Ma trận nhầm lẫn chuẩn trên TOÀN BỘ tập Test ViHOS (1.106 câu) của PhoBERT-BiLSTM-CRF
 cm_data = np.array([
-    [10980,    75,    18],   # True O -> Pred O, B-HOS, I-HOS (I-HOS = 0 trong CRF)
-    [   92,  1180,    56],   # True B-HOS
-    [   48,    62,  1073]    # True I-HOS
+    [10822,   179,   119],   # True O -> Pred O, Pred B-HOS, Pred I-HOS
+    [  315,   867,    82],   # True B-HOS
+    [  444,   114,   477]    # True I-HOS
 ])
 
 plt.figure(figsize=(7, 5), dpi=300)
-sns.heatmap(cm_data, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels, cbar=False)
-plt.title("Ma Trận Nhầm Lẫn BIO Tokens (PhoBERT-BiLSTM-CRF)", fontsize=12, fontweight='bold', pad=15)
+sns.heatmap(cm_data, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels, cbar=False, annot_kws={"fontsize": 11, "fontweight": "bold"})
+plt.title("Ma Trận Nhầm Lẫn BIO Tokens (PhoBERT-BiLSTM-CRF - Toàn bộ Test)", fontsize=12, fontweight='bold', pad=15)
 plt.xlabel("Nhãn Dự Đoán (Predicted)", fontsize=11, fontweight='bold')
 plt.ylabel("Nhãn Thực Tế (Ground Truth)", fontsize=11, fontweight='bold')
 
@@ -192,26 +184,26 @@ plt.show()"""),
     md_cell("""## 6. Hiệu quả trên Câu Đa chuỗi (Multiple Spans) vs. Đơn chuỗi (Single Span) (Slide 14)"""),
 
     code_cell("""categories = ['Đơn chuỗi (Single Span)', 'Đa chuỗi (≥ 2 Spans)']
-f1_baseline = [68.5, 61.2]
-f1_proposed = [71.8, 67.5]
+f1_baseline = [53.41, 60.74]
+f1_proposed = [57.78, 63.35]
 
 x = np.arange(len(categories))
 width = 0.35
 
 plt.figure(figsize=(8, 4.5), dpi=300)
-plt.bar(x - width/2, f1_baseline, width, label='PhoBERT-Linear', color='#CBD5E1')
-plt.bar(x + width/2, f1_proposed, width, label='PhoBERT-BiLSTM-CRF', color='#0284C7')
+plt.bar(x - width/2, f1_baseline, width, label='PhoBERT-Linear', color='#CBD5E1', edgecolor='black')
+plt.bar(x + width/2, f1_proposed, width, label='PhoBERT-BiLSTM-CRF', color='#0284C7', edgecolor='black')
 
-plt.title("So Sánh Hiệu Quả Nhận Diện: Đơn Chuỗi vs. Đa Chuỗi Phân Tán", fontsize=12, fontweight='bold', pad=15)
+plt.title("So Sánh Hiệu Quả Nhận Diện: Đơn Chuỗi vs. Đa Chuỗi Phân Tán (Test Set)", fontsize=12, fontweight='bold', pad=15)
 plt.ylabel("Span-F1 Score (%)", fontsize=11, fontweight='bold')
 plt.xticks(x, categories, fontsize=11, fontweight='bold')
-plt.ylim(50, 80)
-plt.legend(fontsize=10)
+plt.ylim(45, 72)
+plt.legend(fontsize=10, loc='upper left')
 plt.grid(axis='y', linestyle='--', alpha=0.5)
 
 for i in range(len(x)):
-    plt.text(x[i] - width/2, f1_baseline[i] + 0.5, f"{f1_baseline[i]}%", ha='center', fontweight='bold')
-    plt.text(x[i] + width/2, f1_proposed[i] + 0.5, f"{f1_proposed[i]}% (+{f1_proposed[i]-f1_baseline[i]:.1f}%)", ha='center', fontweight='bold', color='#0369A1')
+    plt.text(x[i] - width/2, f1_baseline[i] + 0.6, f"{f1_baseline[i]:.2f}%", ha='center', fontweight='bold')
+    plt.text(x[i] + width/2, f1_proposed[i] + 0.6, f"{f1_proposed[i]:.2f}% (+{f1_proposed[i]-f1_baseline[i]:.2f}%)", ha='center', fontweight='bold', color='#0369A1')
 
 plt.tight_layout()
 fig4_path = os.path.join(FIGURES_DIR, "04_multiple_spans_evaluation.png")
